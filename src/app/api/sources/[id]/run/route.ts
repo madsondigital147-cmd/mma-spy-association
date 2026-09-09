@@ -8,6 +8,16 @@ export const maxDuration = 300;
 // A tela não espera — chama e segue.
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // No deploy (Vercel) o scraper não roda — Chromium headless não cabe em função
+  // serverless. A mineração roda no PC/VPS via `npm run mine` / worker.
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "mineração roda no PC/VPS, não no deploy. Use npm run mine ou o worker." },
+      { status: 409 }
+    );
+  }
+
   const source = await prisma.source.findUnique({ where: { id } });
   if (!source) return NextResponse.json({ error: "fonte não existe" }, { status: 404 });
 
