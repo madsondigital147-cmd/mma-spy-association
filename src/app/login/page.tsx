@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   return (
@@ -12,7 +12,6 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const sp = useSearchParams();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
@@ -28,14 +27,13 @@ function LoginForm() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ user, pass }),
     });
-    setBusy(false);
     if (res.ok) {
-      router.push(sp.get("next") || "/");
-      router.refresh();
-    } else {
-      const j = await res.json().catch(() => ({}));
-      setErr(j.error || "falhou");
+      window.location.href = sp.get("next") || "/";
+      return;
     }
+    setBusy(false);
+    const j = await res.json().catch(() => ({}));
+    setErr(j.error || "falhou");
   }
 
   return (
