@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { authDisabled } from "@/lib/auth";
+import { LogoutLink } from "@/components/LogoutLink";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/">Fila</Link>
             <Link href="/fontes">Fontes</Link>
           </nav>
+          {!authDisabled() && <LogoutLink />}
         </div>
         <div className="wrap">{children}</div>
       </body>

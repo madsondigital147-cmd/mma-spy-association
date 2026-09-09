@@ -13,6 +13,8 @@
     "mine": "tsx src/scripts/mine.ts",
     "verdict": "tsx src/scripts/verdict.ts",
     "worker": "tsx src/scripts/worker.ts",
+    "hash-password": "tsx src/scripts/hash-password.ts",
+    "db:migrate:mark": "prisma migrate resolve --applied 0001_init",
     "postinstall": "prisma generate"
   },
   "dependencies": {
