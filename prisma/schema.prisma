@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Um bloco de palavras-chave + nicho + mercados. É o que você cria na tela "Fontes".
+model Source {
+  id        String    @id @default(cuid())
+  niche     String
+  markets   String // csv de códigos de país: US,GB,DE,BR
+  keywords  String // palavras-chave, uma por linha (texto cru colado)
+  status    String    @default("active") // active | paused
+  createdAt DateTime  @default(now())
+  lastRunAt DateTime?
+  runs      Run[]
+  offers    Offer[]
+}
+
+/// Uma execução do minerador sobre uma Source.
+model Run {
+  id             String    @id @default(cuid())
+  sourceId       String
+  source         Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  status         String    @default("running") // running | ok | error
+  rawCount       Int       @default(0)
+  creativeCount  Int       @default(0)
+  candidateCount Int       @default(0)
+  error          String?
+}
+
+/// Anúncio bruto capturado da Ad Library (API ou scraper).
+model MinedAd {
+  id            String         @id @default(cuid())
+  adArchiveId   String         @unique
+  sourceId      String?
+  pageId        String
+  pageName      String
+  body          String?
+  linkTitle     String?
+  linkCaption   String?
+  linkUrl       String?
+  ctaText       String?
+  countries     String         @default("") // csv
+  platforms     String         @default("") // csv
+  deliveryStart DateTime?
+  deliveryStop  DateTime?
+  active        Boolean        @default(true)
+  snapshotUrl   String?
+  mediaUrl      String?
+  mediaType     String? // image | video
+  mediaHash     String?
+  euReach       Int?
+  firstSeen     DateTime       @default(now())
+  lastSeen      DateTime       @default(now())
+  creativeId    String?
+  creative      MinedCreative? @relation(fields: [creativeId], references: [id])
+
+  @@index([creativeId])
+  @@index([pageId])
+}
+
+/// Agrupamento de anúncios que usam a MESMA mídia/copy. Aqui sai o "N anúncios no criativo".
+model MinedCreative {
+  id          String    @id @default(cuid())
+  mediaHash   String    @unique
+  mediaType   String?
+  sampleMedia String?
+  sampleBody  String?
+  adCount     Int       @default(0)
+  pageCount   Int       @default(0)
+  firstSeen   DateTime  @default(now())
+  lastSeen    DateTime  @default(now())
+  ads         MinedAd[]
+  offerId     String?
+  offer       Offer?    @relation(fields: [offerId], references: [id])
+
+  @@index([offerId])
+}
+
+/// A oferta consolidada — o que aparece na fila de review.
+model Offer {
+  id           String          @id @default(cuid())
+  sourceId     String?
+  source       Source?         @relation(fields: [sourceId], references: [id])
+  title        String
+  advertiser   String
+  pageId       String
+  niche        String?
+  markets      String          @default("") // csv onde foi vista
+  landingUrl   String?
+  gateway      String?
+  funnelType   String? // vsl | advertorial | direct | quiz | unknown
+  language     String?
+  adCount      Int             @default(0)
+  pageCount    Int             @default(0)
+  pageAdCount  Int             @default(0)
+  daysActive   Int             @default(0)
+  trend        String          @default("new") // new | scaling | steady | fading | dead
+  arbitrage    Boolean         @default(false)
+  score        Int             @default(0)
+  status       String          @default("new") // new | approved | testing | ignored
+  verdict      String?
+  verdictAngle String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  creatives    MinedCreative[]
+  snapshots    OfferSnapshot[]
+  tests        OfferTest[]
+
+  @@unique([pageId, title])
+  @@index([status, score])
+}
+
+/// Foto diária de uma oferta — a série disso vira a tendência (escalando/murchando).
+model OfferSnapshot {
+  id          String   @id @default(cuid())
+  offerId     String
+  offer       Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  at          DateTime @default(now())
+  adCount     Int
+  pageAdCount Int
+  active      Boolean
+  landingUrl  String?
+  priceSeen   String?
+}
+
+/// Quando você decide testar uma oferta. O resultado real fecha o loop.
+model OfferTest {
+  id          String   @id @default(cuid())
+  offerId     String
+  offer       Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  startedAt   DateTime @default(now())
+  angle       String?
+  status      String   @default("running") // running | win | loss
+  note        String?
+  roas        Float?
+  profitCents Int?
+}
