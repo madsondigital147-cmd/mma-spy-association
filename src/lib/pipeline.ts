@@ -316,7 +316,9 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       const slugCloaker = /twr|trafficarmor|whiterabbit|cloak/i.test(rep.linkUrl || "") || /twr|trafficarmor/i.test(landingUrl || "");
       if (slugCloaker) cloakerSuspect = true;
 
-      if (!opts.reconsolidate && landingUrl && /^https?:\/\//i.test(landingUrl)) {
+      // landing fetch é HTTP barato — roda também no reconsolidate (backfill de tech stack)
+      const needLanding = !existing || !existing.techStack || existing.gateway == null;
+      if (landingUrl && /^https?:\/\//i.test(landingUrl) && (!opts.reconsolidate || needLanding)) {
         const page = await fetchLanding(landingUrl);
         if (page) {
           const info = detectTech(page.html, page.finalUrl);
