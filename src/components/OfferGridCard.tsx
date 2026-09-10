@@ -8,18 +8,20 @@ export interface OfferView {
   title: string;
   advertiser: string;
   nicheLabel: string | null;
-  markets: string;
   marketsFlags: string;
-  landingUrl: string | null;
   gateway: string | null;
   funnelType: string | null;
+  player: string | null;
+  techStack: string;
   langFlag: string;
   topCreativeAds: number;
-  pageAdCount: number;
   creativeCount: number;
   daysActive: number;
   trend: string;
   arbitrage: boolean;
+  cloakerSuspect: boolean;
+  recommended: boolean;
+  favorite: boolean;
   score: number;
   status: string;
   hook: string | null;
@@ -41,22 +43,23 @@ function ago(iso: string): string {
 export function OfferGridCard({ offer }: { offer: OfferView }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [fav, setFav] = useState(offer.favorite);
 
-  async function act(status: string, e: React.MouseEvent) {
+  async function patch(body: object, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     setBusy(true);
     await fetch(`/api/offers/${offer.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     setBusy(false);
-    router.refresh();
   }
 
   const sc = offer.score >= 70 ? "score" : offer.score >= 45 ? "score mid" : "score low";
-  const hot = offer.score >= 75 || offer.topCreativeAds >= 20;
+  const hot = offer.recommended || offer.score >= 75 || offer.topCreativeAds >= 20;
+  const tech = offer.techStack ? offer.techStack.split(",").filter(Boolean).slice(0, 4) : [];
 
   return (
     <a href={`/oferta/${offer.id}`} className={"ocard" + (hot ? " hot" : "")}>
@@ -66,8 +69,18 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
         </span>
         <span className="ocard-icons">
           {offer.trend === "scaling" && <span title="escalando">📈</span>}
-          {offer.gatAdCount ? <span title="Google Ads Transparency">◎</span> : null}
+          {offer.gatAdCount ? <span title="rodando no Google">G</span> : null}
           {offer.sameIpCount >= 2 ? <span title="multi-domínio">⚑</span> : null}
+          <span
+            className={"star" + (fav ? " on" : "")}
+            onClick={(e) => {
+              patch({ favorite: !fav }, e);
+              setFav(!fav);
+            }}
+            title="favoritar"
+          >
+            {fav ? "★" : "☆"}
+          </span>
           <span className={offer.active ? "active" : ""} title={offer.active ? "ativo" : "inativo"}>
             ●
           </span>
@@ -78,6 +91,16 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
         <span>⏱ {ago(offer.updatedAt)}</span>
         <span className={"badge-status" + (offer.active ? "" : " off")}>{offer.active ? "Ativo" : "Inativo"}</span>
         {offer.trend in TREND && <span className={"badge " + offer.trend}>{TREND[offer.trend]}</span>}
+        {offer.recommended && (
+          <span className="badge" style={{ background: "rgba(124,92,255,.18)", color: "#b8a6ff", borderColor: "transparent" }}>
+            ★ modelar
+          </span>
+        )}
+        {offer.cloakerSuspect && (
+          <span className="badge" style={{ background: "rgba(226,75,74,.14)", color: "var(--danger)", borderColor: "transparent" }}>
+            possível cloaker
+          </span>
+        )}
         {offer.arbitrage && <span className="badge">arbitragem</span>}
       </div>
 
@@ -91,6 +114,16 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
         {offer.hook && <div className="ocard-hook">{offer.hook}</div>}
       </div>
 
+      {tech.length > 0 && (
+        <div className="ocard-meta" style={{ paddingTop: 0 }}>
+          {tech.map((t) => (
+            <span key={t} className="badge">
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="ocard-foot">
         <span>{offer.daysActive}d no ar</span>
         <span>·</span>
@@ -101,13 +134,18 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
 
       {offer.status === "new" && (
         <div className="ocard-foot" style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-          <button className="btn ghost" disabled={busy} onClick={(e) => act("approved", e)}>
+          <button className="btn ghost" disabled={busy} onClick={(e) => patch({ status: "approved" }, e).then(() => router.refresh())}>
             aprovar
           </button>
-          <button className="btn ghost" disabled={busy} onClick={(e) => act("testing", e)}>
+          <button className="btn ghost" disabled={busy} onClick={(e) => patch({ status: "testing" }, e).then(() => router.refresh())}>
             testar
           </button>
-          <button className="btn ghost" disabled={busy} onClick={(e) => act("ignored", e)} style={{ marginLeft: "auto" }}>
+          <button
+            className="btn ghost"
+            disabled={busy}
+            style={{ marginLeft: "auto" }}
+            onClick={(e) => patch({ status: "ignored" }, e).then(() => router.refresh())}
+          >
             ignorar
           </button>
         </div>

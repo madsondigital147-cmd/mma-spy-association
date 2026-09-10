@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { detectFunnel, fetchLanding } from "./gateway";
+import { detectTech, fetchLanding } from "./gateway";
 import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash, videoFrameHash } from "./hash";
 import { parseKeywords } from "./keywords";
 import { detectLang } from "./lang";
@@ -291,11 +291,14 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         include: { snapshots: { orderBy: { at: "asc" } } },
       });
 
-      // enriquecimento: landing page + rastreamento (Fase 2)
+      // enriquecimento: landing page + tech stack + rastreamento
       // no reconsolidate a gente pula (rápido) — as rodadas agendadas enriquecem depois
       let gateway: string | null = existing?.gateway ?? null;
       let funnelType: string | null = existing?.funnelType ?? null;
       let priceSeen: string | null = null;
+      let player: string | null = existing?.player ?? null;
+      let techStack: string = existing?.techStack ?? "";
+      let cloakerSuspect = existing?.cloakerSuspect ?? false;
       let landingUrl: string | null = existing?.landingUrl ?? rep.linkUrl ?? null;
       let track = {
         ga: existing?.trackingGa ?? null,
@@ -303,13 +306,24 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         pixel: existing?.trackingPixel ?? null,
         tiktok: existing?.trackingTiktok ?? null,
       };
+      // display link (linkCaption) diferente do destino = cloaker provável
+      const dispHost = hostOf(rep.linkCaption);
+      const destHost0 = hostOf(rep.linkUrl);
+      if (dispHost && destHost0 && dispHost !== destHost0 && !dispHost.includes(destHost0) && !destHost0.includes(dispHost))
+        cloakerSuspect = true;
+      const slugCloaker = /twr|trafficarmor|whiterabbit|cloak/i.test(rep.linkUrl || "") || /twr|trafficarmor/i.test(landingUrl || "");
+      if (slugCloaker) cloakerSuspect = true;
+
       if (!opts.reconsolidate && landingUrl && /^https?:\/\//i.test(landingUrl)) {
         const page = await fetchLanding(landingUrl);
         if (page) {
-          const info = detectFunnel(page.html, page.finalUrl);
+          const info = detectTech(page.html, page.finalUrl);
           gateway = info.gateway;
           funnelType = info.funnelType;
           priceSeen = info.priceSeen;
+          player = info.player;
+          techStack = info.tech.join(",");
+          if (info.cloakerSuspect) cloakerSuspect = true;
           landingUrl = page.finalUrl;
           track = extractTrackingIds(page.html);
         }
@@ -371,7 +385,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
 
       const ipDomainCount = sameIpDomains ? sameIpDomains.split(",").filter(Boolean).length : 0;
 
-      const score = scoreOffer({
+      let score = scoreOffer({
         adCount: c.adCount,
         pageCount: c.pageCount,
         daysActive,
@@ -384,6 +398,19 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         ipDomainCount,
         gatAdCount,
       });
+      // cloaker = alguém protegendo oferta escalada -> sinal positivo
+      if (cloakerSuspect) score = Math.min(100, score + 6);
+
+      // auto-recomenda pra modelar: escalada + funil montado + fora do BR
+      const recommended =
+        score >= 62 &&
+        (trend === "scaling" || topCreativeAds >= 8) &&
+        !!gateway &&
+        daysActive >= 14 &&
+        !seenCountries.includes("BR");
+      const recommendReason = recommended
+        ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
+        : (existing?.recommendReason ?? null);
 
       const data = {
         sourceId,
@@ -413,6 +440,12 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         gatAdCount,
         gatFirstSeen,
         gatLastSeen,
+        player,
+        techStack,
+        cloakerSuspect,
+        recommended,
+        recommendReason,
+        adSnapshotUrl: rep.snapshotUrl ?? existing?.adSnapshotUrl ?? null,
       };
 
       const offer = existing

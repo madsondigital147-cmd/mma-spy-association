@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV: { href: string; label: string; ico: string; tag?: string }[] = [
   { href: "/", label: "Fila de review", ico: "▦" },
+  { href: "/favoritos", label: "Favoritos", ico: "★" },
   { href: "/ofertas", label: "Ofertas", ico: "◎" },
   { href: "/criativos", label: "Criativos", ico: "▤" },
   { href: "/paginas", label: "Páginas", ico: "⚑" },

@@ -26,7 +26,12 @@ export function Toolbar({
   onlyDup,
   onlyArb,
   onlyMulti,
+  onlyFav,
+  onlyRec,
+  onlyCloak,
   counts,
+  favCount,
+  recCount,
 }: {
   status: string;
   niche: string;
@@ -35,7 +40,12 @@ export function Toolbar({
   onlyDup: boolean;
   onlyArb: boolean;
   onlyMulti: boolean;
+  onlyFav: boolean;
+  onlyRec: boolean;
+  onlyCloak: boolean;
   counts: Record<string, number>;
+  favCount: number;
+  recCount: number;
 }) {
   const router = useRouter();
   function apply(patch: Record<string, string | null>) {
@@ -50,12 +60,28 @@ export function Toolbar({
   return (
     <div className="toolbar">
       {STATUSES.map(([v, l]) => (
-        <span key={v} className={"chip" + (status === v ? " on" : "")} onClick={() => apply({ status: v })}>
+        <span
+          key={v}
+          className={"chip" + (status === v && !onlyFav && !onlyRec ? " on" : "")}
+          onClick={() => apply({ status: v, fav: null, rec: null })}
+        >
           {l}
           {counts[v] ? ` ${counts[v]}` : ""}
         </span>
       ))}
+      <span
+        className={"chip" + (onlyRec ? " on" : "")}
+        onClick={() => apply({ rec: onlyRec ? null : "1", fav: null })}
+        style={{ color: onlyRec ? undefined : "#b8a6ff" }}
+      >
+        ★ recomendadas{recCount ? ` ${recCount}` : ""}
+      </span>
+      <span className={"chip" + (onlyFav ? " on" : "")} onClick={() => apply({ fav: onlyFav ? null : "1", rec: null })}>
+        ⭐ favoritos{favCount ? ` ${favCount}` : ""}
+      </span>
+
       <span style={{ width: 1, background: "var(--border)", alignSelf: "stretch", margin: "0 4px" }} />
+
       <select className="chip" value={sort} onChange={(e) => apply({ sort: e.target.value })}>
         {SORTS.map(([v, l]) => (
           <option key={v} value={v}>
@@ -65,6 +91,9 @@ export function Toolbar({
       </select>
       <span className={"chip" + (onlyDup ? " on" : "")} onClick={() => apply({ dup: onlyDup ? null : "1" })}>
         escalando / duplicando
+      </span>
+      <span className={"chip" + (onlyCloak ? " on" : "")} onClick={() => apply({ cloak: onlyCloak ? null : "1" })}>
+        possível cloaker
       </span>
       <span className={"chip" + (onlyArb ? " on" : "")} onClick={() => apply({ arb: onlyArb ? null : "1" })}>
         arbitragem

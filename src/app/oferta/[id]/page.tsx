@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { NICHE_BY_ID } from "@/lib/niches";
 import { langFlag, langName, marketsFlags, countryName } from "@/lib/flags";
+import { offerLinks } from "@/lib/links";
 import { Sparkline } from "@/components/Sparkline";
 import { OfferActions } from "@/components/OfferActions";
 
@@ -20,8 +21,10 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
   if (!offer) notFound();
 
   const nicheLabel = offer.niche ? NICHE_BY_ID.get(offer.niche)?.label ?? offer.niche : "—";
-  const adLibPage = `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&view_all_page_id=${offer.pageId}`;
+  const L = offerLinks(offer);
   const points = offer.snapshots.map((s) => ({ at: s.at.toISOString(), v: s.adCount }));
+  const tech = offer.techStack ? offer.techStack.split(",").filter(Boolean) : [];
+  const priceSeen = offer.snapshots.filter((s) => s.priceSeen).pop()?.priceSeen ?? null;
 
   const stat = [
     ["Estrutura", (offer.funnelType || "—").toUpperCase()],
@@ -47,8 +50,23 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
             · atualizado {new Date(offer.updatedAt).toLocaleString("pt-BR")}
           </p>
         </div>
-        <OfferActions id={offer.id} status={offer.status} />
+        <OfferActions id={offer.id} status={offer.status} favorite={offer.favorite} />
       </div>
+
+      {offer.recommended && (
+        <div className="mining" style={{ background: "rgba(124,92,255,.14)", borderColor: "rgba(124,92,255,.35)" }}>
+          <span style={{ color: "#b8a6ff", fontWeight: 600 }}>★ Recomendado pra modelar</span>
+          <span style={{ color: "var(--muted)" }}>{offer.recommendReason}</span>
+        </div>
+      )}
+      {offer.cloakerSuspect && (
+        <div className="mining" style={{ background: "rgba(226,75,74,.1)", borderColor: "rgba(226,75,74,.3)" }}>
+          <span style={{ color: "var(--danger)", fontWeight: 600 }}>⚠ Possível cloaker</span>
+          <span style={{ color: "var(--muted)" }}>
+            landing pode ser página branca — testa como cliente real (perfil nativo + VPN do país)
+          </span>
+        </div>
+      )}
 
       <div className="statcards">
         {stat.map(([k, v]) => (
@@ -112,23 +130,70 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
           Links
         </div>
         <div className="actions">
-          {offer.landingUrl && (
-            <a className="btn" href={offer.landingUrl} target="_blank" rel="noreferrer">
-              Abrir landing / VSL ↗
+          {L.landing && (
+            <a className="btn" href={L.landing} target="_blank" rel="noreferrer">
+              Página de venda / VSL ↗
             </a>
           )}
-          <a className="btn" href={adLibPage} target="_blank" rel="noreferrer">
-            Página na Biblioteca de Anúncios ↗
+          {L.adSnapshot && (
+            <a className="btn" href={L.adSnapshot} target="_blank" rel="noreferrer">
+              Ver o anúncio ↗
+            </a>
+          )}
+          <a className="btn" href={L.fbPage} target="_blank" rel="noreferrer">
+            Página no Facebook Ads ↗
           </a>
-          {(offer.trackingPixel || offer.trackingGa) && (
-            <span className="badge" style={{ alignSelf: "center" }}>
-              {offer.trackingPixel ? `pixel ${offer.trackingPixel}` : ""} {offer.trackingGa || ""}
+          <a className="btn" href={L.fbLibraryDomain} target="_blank" rel="noreferrer">
+            Biblioteca de Anúncios (domínio) ↗
+          </a>
+          {L.googleTransparency && (
+            <a className="btn" href={L.googleTransparency} target="_blank" rel="noreferrer">
+              Google Ads Transparency {offer.gatAdCount ? `(${offer.gatAdCount})` : ""} ↗
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="section-label" style={{ margin: "0 0 10px" }}>
+          Tech stack
+        </div>
+        {tech.length === 0 ? (
+          <span style={{ color: "var(--faint)", fontSize: 12 }}>não detectado (landing ainda não enriquecida)</span>
+        ) : (
+          <div className="actions">
+            {tech.map((t) => (
+              <span key={t} className="badge">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)", display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {offer.player && (
+            <span>
+              <b>Player:</b> {offer.player}
+            </span>
+          )}
+          {priceSeen && (
+            <span>
+              <b>Preço visto:</b> {priceSeen}
+            </span>
+          )}
+          {offer.trackingPixel && (
+            <span>
+              <b>FB Pixel:</b> {offer.trackingPixel}
+            </span>
+          )}
+          {offer.trackingGa && (
+            <span>
+              <b>GA:</b> {offer.trackingGa}
             </span>
           )}
         </div>
         {offer.sameIpDomains && (
           <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
-            <b>Domínios no mesmo IP:</b> {offer.sameIpDomains.split(",").slice(0, 12).join(" · ")}
+            <b>Domínios no mesmo IP:</b> {offer.sameIpDomains.split(",").slice(0, 15).join(" · ")}
           </div>
         )}
       </div>

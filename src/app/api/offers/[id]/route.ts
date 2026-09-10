@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 const Patch = z.object({
   status: z.enum(["new", "approved", "testing", "ignored"]).optional(),
   angle: z.string().max(300).optional(),
+  favorite: z.boolean().optional(),
+  recommended: z.boolean().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

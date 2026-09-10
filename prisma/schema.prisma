@@ -124,6 +124,14 @@ model Offer {
   gatAdCount     Int? // nº de anúncios do domínio no Google Ads Transparency
   gatFirstSeen   DateTime?
   gatLastSeen    DateTime?
+  // --- tech stack + curadoria ---
+  techStack      String  @default("") // csv: VTurb,Cartpanda,Stripe,Atomicat…
+  player         String? // player de vídeo detectado
+  cloakerSuspect Boolean @default(false)
+  favorite       Boolean @default(false)
+  recommended    Boolean @default(false)
+  recommendReason String?
+  adSnapshotUrl  String? // link do anúncio na Biblioteca
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   creatives    MinedCreative[]
