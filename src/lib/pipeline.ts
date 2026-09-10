@@ -12,6 +12,7 @@ import { marketLang, translateKeyword, type Lang } from "./translate";
 
 const MIN_ADS = Number(process.env.MIN_ADS_PER_CREATIVE || "2");
 const MIN_DAYS = Number(process.env.MIN_DAYS_ACTIVE || "7");
+const ENRICH_LIMIT = Number(process.env.ENRICH_LIMIT || "25"); // candidatas c/ reverse-IP + GAT por rodada
 const DAY = 86_400_000;
 
 // linhas de copy que quase nunca são oferta de DR
@@ -214,12 +215,15 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       ).map((o) => o.pageId)
     );
 
-    const candidates = await prisma.minedCreative.findMany({
+    const candidatesRaw = await prisma.minedCreative.findMany({
       where: { id: { in: [...touchedCreatives] }, adCount: { gte: MIN_ADS } },
       include: { ads: true },
     });
+    // pré-ordena pelas mais promissoras — só as top N ganham o enriquecimento pesado
+    const candidates = candidatesRaw.sort((a, b) => b.adCount + b.pageCount * 2 - (a.adCount + a.pageCount * 2));
 
     let offersUpserted = 0;
+    let heavyEnriched = 0;
 
     for (const c of candidates) {
      try {
@@ -263,15 +267,18 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         }
       }
 
-      // grafo de domínios (Fase 2) + Google Ads Transparency (Fase 3) — só na 1ª vez
+      // grafo de domínios (Fase 2) + Google Ads Transparency (Fase 3)
+      // pesado (reverse-IP + browser) — só nas top ENRICH_LIMIT candidatas, 1x
       let sameIpDomains = existing?.sameIpDomains ?? "";
       let gatAdCount = existing?.gatAdCount ?? null;
       let gatFirstSeen = existing?.gatFirstSeen ?? null;
       let gatLastSeen = existing?.gatLastSeen ?? null;
       const domain = hostOf(landingUrl);
-      if (domain && (!existing || existing.gatAdCount == null)) {
+      const needHeavy = domain && (!existing || existing.gatAdCount == null);
+      if (needHeavy && heavyEnriched < ENRICH_LIMIT) {
+        heavyEnriched++;
         try {
-          const [rip, gat] = await Promise.all([reverseIp(domain), gatDomainTimeline(domain)]);
+          const [rip, gat] = await Promise.all([reverseIp(domain!), gatDomainTimeline(domain!)]);
           if (rip.length) sameIpDomains = rip.join(",").slice(0, 2000);
           if (gat) {
             gatAdCount = gat.adCount;
