@@ -75,12 +75,20 @@ function mapNode(node: any, country: string): RawAd | null {
   const images = pick<any[]>(snapshot, ["images"]) ?? [];
   const videos = pick<any[]>(snapshot, ["videos"]) ?? [];
   let mediaUrl: string | undefined;
+  let posterUrl: string | undefined;
   let mediaType: "image" | "video" | undefined;
   if (videos.length) {
     mediaUrl = pick<string>(videos[0], ["video_hd_url", "video_sd_url", "watermarked_video_hd_url"]);
+    posterUrl = pick<string>(videos[0], [
+      "video_preview_image_url",
+      "preview_image_url",
+      "thumbnail_url",
+    ]);
     mediaType = "video";
   } else if (images.length) {
     mediaUrl = pick<string>(images[0], ["original_image_url", "resized_image_url"]);
+    posterUrl =
+      pick<string>(images[0], ["resized_image_url", "original_image_url"]) ?? mediaUrl;
     mediaType = "image";
   }
 
@@ -107,6 +115,7 @@ function mapNode(node: any, country: string): RawAd | null {
     deliveryStop: toIso(endRaw),
     active: isActive ?? !endRaw,
     mediaUrl,
+    posterUrl,
     mediaType,
     source: "scraper",
   };

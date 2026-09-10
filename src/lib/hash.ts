@@ -140,6 +140,31 @@ export async function videoFrameHash(url: string): Promise<string | null> {
   }
 }
 
+/** Extrai um quadro de ~1s do vídeo num tamanho visível (JPEG) — "print da frente". */
+export async function videoPosterBuffer(url: string): Promise<Buffer | null> {
+  try {
+    const ff = await findFfmpeg();
+    if (!ff) return null;
+    const { execFile } = await import("node:child_process");
+    const { readFile, unlink } = await import("node:fs/promises");
+    const os = await import("node:os");
+    const out = path.join(os.tmpdir(), `mmaspy_poster_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        ff,
+        ["-ss", "1", "-i", url, "-frames:v", "1", "-vf", "scale=512:-2", "-q:v", "4", "-y", out],
+        { timeout: 20000 },
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+    const buf = await readFile(out).catch(() => null);
+    unlink(out).catch(() => {});
+    return buf && buf.length > 400 ? buf : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveMedia(buf: Buffer, key: string, ext: string): Promise<string> {
   const dir = path.resolve(MEDIA_DIR);
   await mkdir(dir, { recursive: true });

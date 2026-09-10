@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { detectTech, fetchLanding } from "./gateway";
 import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash, videoFrameHash } from "./hash";
+import { cachePoster } from "./media";
 import { parseKeywords } from "./keywords";
 import { detectLang } from "./lang";
 import { scoreOffer } from "./score";
@@ -13,6 +14,7 @@ import { marketLang, translateKeyword, type Lang } from "./translate";
 const MIN_ADS = Number(process.env.MIN_ADS_PER_CREATIVE || "2");
 const MIN_DAYS = Number(process.env.MIN_DAYS_ACTIVE || "7");
 const ENRICH_LIMIT = Number(process.env.ENRICH_LIMIT || "25"); // candidatas c/ reverse-IP + GAT por rodada
+const POSTER_LIMIT = Number(process.env.POSTER_LIMIT || "400"); // downloads de "print do criativo" por rodada
 const DAY = 86_400_000;
 
 // linhas de copy que quase nunca são oferta de DR
@@ -207,6 +209,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
             active: ad.active,
             snapshotUrl: ad.snapshotUrl,
             mediaUrl: ad.mediaUrl,
+            posterUrl: ad.posterUrl ?? null,
             mediaType: ad.mediaType,
             mediaHash,
             euReach: ad.euReach,
@@ -218,6 +221,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
             deliveryStop: stop,
             countries: ad.countries.join(","),
             creativeId,
+            ...(ad.posterUrl ? { posterUrl: ad.posterUrl } : {}),
             ...(transcript ? { transcript } : {}),
           },
         });
@@ -226,13 +230,35 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
     }
 
     // ---- 2. recalcula contadores dos criativos tocados ----
+    let postersCached = 0;
     for (const cid of touchedCreatives) {
       try {
         const ads = await prisma.minedAd.findMany({ where: { creativeId: cid } });
         const pages = new Set(ads.map((a) => a.pageId));
         const sample = ads.find((a) => a.body)?.body ?? ads.find((a) => a.linkTitle)?.linkTitle ?? null;
         const hook = sample ? stripControl(sample).split(/[\n.!?]/)[0].trim().slice(0, 120) : null;
-        const img = ads.find((a) => a.mediaType === "image" && a.mediaUrl)?.mediaUrl ?? null;
+        // "print da frente do criativo": poster do vídeo OU a própria imagem
+        const posterUrl =
+          ads.find((a) => a.posterUrl)?.posterUrl ??
+          ads.find((a) => a.mediaType === "image" && a.mediaUrl)?.mediaUrl ??
+          null;
+        const videoUrl = ads.find((a) => a.mediaType === "video" && a.mediaUrl)?.mediaUrl ?? null;
+
+        const cur = await prisma.minedCreative.findUnique({
+          where: { id: cid },
+          select: { imageHash: true },
+        });
+        let imageHash = cur?.imageHash ?? undefined;
+        if (!imageHash && (posterUrl || videoUrl) && postersCached < POSTER_LIMIT) {
+          postersCached++;
+          try {
+            const key = await cachePoster(cid, posterUrl, videoUrl);
+            if (key) imageHash = key;
+          } catch {
+            /* segue sem print */
+          }
+        }
+
         await prisma.minedCreative.update({
           where: { id: cid },
           data: {
@@ -242,7 +268,8 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
             lastSeen: new Date(),
             sampleBody: sample ? normalizeText(sample) : undefined,
             hookText: hook || undefined,
-            imageUrl: img || undefined,
+            imageUrl: posterUrl || undefined,
+            imageHash: imageHash || undefined,
           },
         });
       } catch (e) {
@@ -405,15 +432,17 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       // cloaker = alguém protegendo oferta escalada -> sinal positivo
       if (cloakerSuspect) score = Math.min(100, score + 6);
 
-      // auto-recomenda pra modelar: escalada + funil montado + fora do BR
+      // auto-recomenda pra modelar: escalada + funil identificável + fora do BR
+      const funnelKnown =
+        !!gateway || !!player || !!techStack || funnelType === "vsl" || funnelType === "advertorial";
       const recommended =
-        score >= 62 &&
-        (trend === "scaling" || topCreativeAds >= 8) &&
-        !!gateway &&
+        score >= 58 &&
+        (trend === "scaling" || topCreativeAds >= 6) &&
+        funnelKnown &&
         daysActive >= 14 &&
         !seenCountries.includes("BR");
       const recommendReason = recommended
-        ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
+        ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway || player || techStack.split(",")[0] || "funil montado"}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
         : (existing?.recommendReason ?? null);
 
       const data = {
@@ -454,9 +483,11 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         landingDomain: domain,
         imageUrl:
           c.imageUrl ??
+          ads.find((a) => a.posterUrl)?.posterUrl ??
           ads.find((a) => a.mediaType === "image" && a.mediaUrl)?.mediaUrl ??
           existing?.imageUrl ??
           null,
+        imageHash: c.imageHash ?? existing?.imageHash ?? null,
       };
 
       const offer = existing

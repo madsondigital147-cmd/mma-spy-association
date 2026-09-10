@@ -29,8 +29,15 @@ type Row = {
   sameIpDomains: string;
   discoveredVia: string;
   imageUrl: string | null;
-  creatives?: { hookText: string | null; imageUrl?: string | null }[];
+  imageHash?: string | null;
+  creatives?: { hookText: string | null; imageUrl?: string | null; imageHash?: string | null }[];
 };
+
+/** "print da frente do criativo": cache durável (/i/<hash>) primeiro, CDN do FB como fallback. */
+export function posterSrc(imageHash?: string | null, imageUrl?: string | null): string | null {
+  if (imageHash) return `/i/${imageHash}`;
+  return imageUrl ?? null;
+}
 
 export function toOfferView(o: Row): OfferView {
   return {
@@ -60,6 +67,9 @@ export function toOfferView(o: Row): OfferView {
     gatAdCount: o.gatAdCount,
     sameIpCount: o.sameIpDomains ? o.sameIpDomains.split(",").filter(Boolean).length : 0,
     discoveredVia: o.discoveredVia,
-    imageUrl: o.imageUrl ?? o.creatives?.[0]?.imageUrl ?? null,
+    imageUrl:
+      posterSrc(o.imageHash, o.imageUrl) ??
+      posterSrc(o.creatives?.[0]?.imageHash, o.creatives?.[0]?.imageUrl) ??
+      null,
   };
 }

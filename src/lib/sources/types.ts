@@ -14,6 +14,7 @@ export interface RawAd {
   active: boolean;
   snapshotUrl?: string;
   mediaUrl?: string;
+  posterUrl?: string; // frame/thumb estático (vídeo ou imagem)
   mediaType?: "image" | "video";
   euReach?: number;
   source: "meta-api" | "scraper";

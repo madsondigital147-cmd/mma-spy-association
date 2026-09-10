@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 type SP = { [k: string]: string | string[] | undefined };
 const S = (v: SP[string]) => (typeof v === "string" ? v : "");
 
-const CREATIVE_SEL = { creatives: { orderBy: { adCount: "desc" as const }, take: 1, select: { hookText: true } } };
+const CREATIVE_SEL = {
+  creatives: {
+    orderBy: { adCount: "desc" as const },
+    take: 1,
+    select: { hookText: true, imageUrl: true, imageHash: true },
+  },
+};
 
 export default async function FilaPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;

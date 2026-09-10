@@ -56,6 +56,7 @@ model MinedAd {
   active        Boolean        @default(true)
   snapshotUrl   String?
   mediaUrl      String?
+  posterUrl     String? // frame/thumb estático do criativo (vídeo ou imagem) na CDN do FB
   mediaType     String? // image | video
   mediaHash     String?
   euReach       Int?
@@ -77,7 +78,8 @@ model MinedCreative {
   sampleMedia    String?
   sampleBody     String?
   hookText       String? // 1ª linha da copy — texto do card
-  imageUrl       String? // thumbnail (mídia do FB p/ imagem, frame extraído p/ vídeo)
+  imageUrl       String? // thumbnail (mídia do FB p/ imagem, frame extraído p/ vídeo) — CDN, expira
+  imageHash      String? // chave do MediaCache — print da frente do criativo, servido por /i/<hash>
   adCount        Int       @default(0)
   pageCount      Int       @default(0)
   advertiserCount Int      @default(0) // páginas/anunciantes distintos usando este criativo
@@ -136,7 +138,8 @@ model Offer {
   adSnapshotUrl  String? // link do anúncio na Biblioteca
   discoveredVia  String  @default("meta-scraper") // meta-scraper | meta-api | tiktok | youtube | reviews
   landingDomain  String? // domínio da landing — pra cruzar a mesma oferta entre plataformas
-  imageUrl       String? // thumbnail do criativo (mídia do FB / frame do vídeo)
+  imageUrl       String? // thumbnail do criativo (mídia do FB / frame do vídeo) — CDN, expira
+  imageHash      String? // chave do MediaCache — print da frente do criativo, servido por /i/<hash>
   favoritedAt    DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -192,4 +195,13 @@ model PageSnapshot {
   activeAdCount Int
 
   @@index([pageId, at])
+}
+
+/// Cache durável do "print da frente do criativo". A CDN do FB expira os links;
+/// aqui os bytes ficam no banco (redimensionados) e são servidos por /i/<hash>.
+model MediaCache {
+  hash String   @id
+  mime String   @default("image/jpeg")
+  bytes Bytes
+  at   DateTime @default(now())
 }

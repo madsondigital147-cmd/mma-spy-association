@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { posterSrc } from "@/lib/offerView";
 
 export const dynamic = "force-dynamic";
 type SP = { [k: string]: string | string[] | undefined };
@@ -48,7 +49,21 @@ export default async function CriativosPage({ searchParams }: { searchParams: Pr
               <div className="ocard-title" style={{ minHeight: 38 }}>
                 {c.hookText || c.sampleBody?.slice(0, 90) || "— sem texto —"}
               </div>
-              <div className="ocard-thumb">{c.mediaType === "video" ? "▶" : "▤"}</div>
+              <div className="ocard-thumb">
+                {posterSrc(c.imageHash, c.imageUrl) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={posterSrc(c.imageHash, c.imageUrl)!}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : c.mediaType === "video" ? (
+                  "▶"
+                ) : (
+                  "▤"
+                )}
+              </div>
               <div className="ocard-foot">
                 {c.offer ? (
                   <a href={`/oferta/${c.offer.id}`} style={{ color: "var(--accent-2)" }}>

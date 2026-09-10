@@ -25,7 +25,13 @@ export default async function OfertasPage({ searchParams }: { searchParams: Prom
     where,
     orderBy: [{ topCreativeAds: "desc" }, { pageCount: "desc" }],
     take: 150,
-    include: { creatives: { orderBy: { adCount: "desc" }, take: 1, select: { hookText: true } } },
+    include: {
+      creatives: {
+        orderBy: { adCount: "desc" },
+        take: 1,
+        select: { hookText: true, imageUrl: true, imageHash: true },
+      },
+    },
   });
 
   return (

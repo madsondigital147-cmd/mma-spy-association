@@ -8,6 +8,7 @@ export function SourceForm() {
   const router = useRouter();
   const [niche, setNiche] = useState("emagrecimento");
   const [markets, setMarkets] = useState<string[]>(["US", "GB", "DE", "BR"]);
+  const [kind, setKind] = useState<"meta" | "reviews" | "tiktok" | "youtube">("meta");
   const [kw, setKw] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function SourceForm() {
       const res = await fetch("/api/sources", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ niche, markets, keywords: kw }),
+        body: JSON.stringify({ niche, markets, keywords: kw, kind }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "falhou");
@@ -73,7 +74,24 @@ export function SourceForm() {
         ))}
       </div>
 
-      <div className="section-label">2 · Mercados</div>
+      <div className="section-label">2 · Origem</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {([
+          ["meta", "Meta / Biblioteca de Anúncios"],
+          ["reviews", "Reviews (TrustPilot / tuquejasuma) → domínios"],
+          ["tiktok", "TikTok Creative Center → domínios"],
+          ["youtube", "YouTube (descrições) → domínios"],
+        ] as const).map(([id, label]) => (
+          <span key={id} className={"chip" + (kind === id ? " on" : "")} onClick={() => setKind(id)}>
+            {label}
+          </span>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+        as origens que não são Meta usam as palavras-chave pra descobrir domínios de oferta; o scraper da Biblioteca acha os anúncios desses domínios.
+      </div>
+
+      <div className="section-label">3 · Mercados</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {MARKETS.map((m) => (
           <span key={m.code} className={"chip" + (markets.includes(m.code) ? " on" : "")} onClick={() => toggleMarket(m.code)}>
@@ -84,7 +102,7 @@ export function SourceForm() {
       </div>
 
       <div className="section-label" style={{ display: "flex", justifyContent: "space-between" }}>
-        <span>3 · Palavras-chave</span>
+        <span>4 · Palavras-chave</span>
         <span className="btn ghost" style={{ padding: "2px 8px", fontSize: 12 }} onClick={loadSeeds}>
           + carregar sugestões do nicho
         </span>

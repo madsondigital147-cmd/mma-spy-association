@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { NICHE_BY_ID } from "@/lib/niches";
 import { langFlag, langName, marketsFlags, countryName } from "@/lib/flags";
 import { offerLinks } from "@/lib/links";
+import { posterSrc } from "@/lib/offerView";
 import { Sparkline } from "@/components/Sparkline";
 import { OfferActions } from "@/components/OfferActions";
 
@@ -246,9 +247,14 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
               {c.hookText || c.sampleBody?.slice(0, 80) || "—"}
             </div>
             <div className="ocard-thumb">
-              {c.imageUrl ? (
+              {posterSrc(c.imageHash, c.imageUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} referrerPolicy="no-referrer" />
+                <img
+                  src={posterSrc(c.imageHash, c.imageUrl)!}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  referrerPolicy="no-referrer"
+                />
               ) : c.mediaType === "video" ? (
                 "▶"
               ) : (
