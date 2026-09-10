@@ -159,8 +159,23 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
 
       for (const ad of ads) {
         if (!ad.adArchiveId) continue;
-        const fp = await fingerprint(ad);
-        const creativeId = await resolveCreativeId(fp.hash, fp.type, fp.sample);
+
+        // já vimos esse anúncio? reaproveita o hash/criativo — não re-baixa mídia
+        const seen = await prisma.minedAd.findUnique({
+          where: { adArchiveId: ad.adArchiveId },
+          select: { transcript: true, mediaHash: true, creativeId: true },
+        });
+
+        let creativeId: string;
+        let mediaHash: string;
+        if (seen?.mediaHash && seen.creativeId) {
+          creativeId = seen.creativeId;
+          mediaHash = seen.mediaHash;
+        } else {
+          const fp = await fingerprint(ad);
+          mediaHash = fp.hash;
+          creativeId = await resolveCreativeId(fp.hash, fp.type, fp.sample);
+        }
         touchedCreatives.add(creativeId);
 
         const start = ad.deliveryStart ? new Date(ad.deliveryStart) : null;
@@ -168,12 +183,8 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
 
         // transcrição opcional (Fase 2) — só p/ vídeo novo, se ligado
         let transcript: string | null = null;
-        if (transcribeEnabled() && ad.mediaType === "video" && ad.mediaUrl) {
-          const seen = await prisma.minedAd.findUnique({
-            where: { adArchiveId: ad.adArchiveId },
-            select: { transcript: true },
-          });
-          if (!seen?.transcript) transcript = await transcribeVideo(ad.mediaUrl);
+        if (transcribeEnabled() && ad.mediaType === "video" && ad.mediaUrl && !seen?.transcript) {
+          transcript = await transcribeVideo(ad.mediaUrl);
         }
 
         await prisma.minedAd.upsert({
@@ -197,7 +208,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
             snapshotUrl: ad.snapshotUrl,
             mediaUrl: ad.mediaUrl,
             mediaType: ad.mediaType,
-            mediaHash: fp.hash,
+            mediaHash,
             euReach: ad.euReach,
             creativeId,
           },
