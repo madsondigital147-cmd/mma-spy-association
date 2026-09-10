@@ -8,6 +8,7 @@ import { mineTerm, type RawAd } from "./sources";
 import { gatDomainTimeline } from "./sources/googleAdsTransparency";
 import { extractTrackingIds, hostOf, reverseIp } from "./tracking";
 import { transcribeEnabled, transcribeVideo } from "./transcribe";
+import { marketLang, translateKeyword, type Lang } from "./translate";
 
 const MIN_ADS = Number(process.env.MIN_ADS_PER_CREATIVE || "2");
 const MIN_DAYS = Number(process.env.MIN_DAYS_ACTIVE || "7");
@@ -102,17 +103,26 @@ export async function runSource(sourceId: string): Promise<RunResult> {
   let raw = 0;
   const touchedCreatives = new Set<string>();
 
+  // agrupa mercados por idioma pra traduzir a palavra-chave na hora da busca
+  const marketsByLang = new Map<string, string[]>();
+  for (const m of markets) {
+    const l = marketLang(m);
+    marketsByLang.set(l, [...(marketsByLang.get(l) ?? []), m]);
+  }
+
   try {
     // ---- 1. ingestão + fingerprint + dedup por criativo ----
     for (const term of keywords) {
-      let ads: RawAd[] = [];
-      try {
-        ads = await mineTerm(term, markets);
-      } catch (e) {
-        console.warn(`[runSource] "${term}" falhou: ${(e as Error).message}`);
-        continue;
-      }
-      raw += ads.length;
+      for (const [lang, langMarkets] of marketsByLang) {
+        const q = await translateKeyword(term, lang as Lang);
+        let ads: RawAd[] = [];
+        try {
+          ads = await mineTerm(q, langMarkets);
+        } catch (e) {
+          console.warn(`[runSource] "${q}" (${lang}) falhou: ${(e as Error).message}`);
+          continue;
+        }
+        raw += ads.length;
 
       for (const ad of ads) {
         if (!ad.adArchiveId) continue;
@@ -167,6 +177,7 @@ export async function runSource(sourceId: string): Promise<RunResult> {
             ...(transcript ? { transcript } : {}),
           },
         });
+        }
       }
     }
 

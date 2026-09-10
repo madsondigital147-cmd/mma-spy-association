@@ -59,18 +59,22 @@ export function OfferCard({ offer }: { offer: OfferView }) {
     <div className={"offer" + (hot ? " hot" : "")}>
       <div className="thumb">{offer.funnelType === "vsl" ? "▶" : "▦"}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 500 }}>{offer.title}</span>
-          <span className={"badge " + scoreClass}>score {offer.score}</span>
-          {offer.trend !== "new" && offer.trend !== "steady" && (
-            <span className={"badge " + offer.trend}>{TREND_LABEL[offer.trend]}</span>
-          )}
-          {offer.arbitrage && <span className="badge">arbitragem</span>}
-          {(offer.sameIpCount ?? 0) >= 2 && (offer.sameIpCount ?? 0) <= 40 && (
-            <span className="badge">{offer.sameIpCount} domínios / mesmo IP</span>
-          )}
-          {(offer.gatAdCount ?? 0) > 0 && <span className="badge">GAT {offer.gatAdCount}</span>}
-          {offer.nicheLabel && <span className="badge">{offer.nicheLabel}</span>}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>{offer.title}</span>
+              {offer.trend !== "new" && offer.trend !== "steady" && (
+                <span className={"badge " + offer.trend}>{TREND_LABEL[offer.trend]}</span>
+              )}
+              {offer.arbitrage && <span className="badge">arbitragem</span>}
+              {(offer.sameIpCount ?? 0) >= 2 && (offer.sameIpCount ?? 0) <= 40 && (
+                <span className="badge">{offer.sameIpCount} domínios / mesmo IP</span>
+              )}
+              {(offer.gatAdCount ?? 0) > 0 && <span className="badge">GAT {offer.gatAdCount}</span>}
+              {offer.nicheLabel && <span className="badge">{offer.nicheLabel}</span>}
+            </div>
+          </div>
+          <span className={"badge " + scoreClass}>{offer.score}</span>
         </div>
 
         <div className="meta">
