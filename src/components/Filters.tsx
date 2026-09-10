@@ -15,6 +15,7 @@ export function FilaFilters({
   niche,
   onlyArbitrage,
   onlyScaling,
+  onlyMultiDomain,
   minAds,
   counts,
 }: {
@@ -22,6 +23,7 @@ export function FilaFilters({
   niche: string;
   onlyArbitrage: boolean;
   onlyScaling: boolean;
+  onlyMultiDomain: boolean;
   minAds: number;
   counts: Record<string, number>;
 }) {
@@ -62,6 +64,12 @@ export function FilaFilters({
         onClick={() => apply({ arbitrage: onlyArbitrage ? null : "1" })}
       >
         arbitragem de geo
+      </span>
+      <span
+        className={"chip" + (onlyMultiDomain ? " on" : "")}
+        onClick={() => apply({ multidom: onlyMultiDomain ? null : "1" })}
+      >
+        multi-domínio
       </span>
       <span className={"chip" + (minAds >= 3 ? " on" : "")} onClick={() => apply({ minAds: minAds >= 3 ? null : "3" })}>
         3+ anúncios no criativo

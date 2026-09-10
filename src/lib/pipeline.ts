@@ -5,6 +5,9 @@ import { parseKeywords } from "./keywords";
 import { detectLang } from "./lang";
 import { scoreOffer } from "./score";
 import { mineTerm, type RawAd } from "./sources";
+import { gatDomainTimeline } from "./sources/googleAdsTransparency";
+import { extractTrackingIds, hostOf, reverseIp } from "./tracking";
+import { transcribeEnabled, transcribeVideo } from "./transcribe";
 
 const MIN_ADS = Number(process.env.MIN_ADS_PER_CREATIVE || "2");
 const MIN_DAYS = Number(process.env.MIN_DAYS_ACTIVE || "7");
@@ -120,9 +123,20 @@ export async function runSource(sourceId: string): Promise<RunResult> {
         const start = ad.deliveryStart ? new Date(ad.deliveryStart) : null;
         const stop = ad.deliveryStop ? new Date(ad.deliveryStop) : null;
 
+        // transcrição opcional (Fase 2) — só p/ vídeo novo, se ligado
+        let transcript: string | null = null;
+        if (transcribeEnabled() && ad.mediaType === "video" && ad.mediaUrl) {
+          const seen = await prisma.minedAd.findUnique({
+            where: { adArchiveId: ad.adArchiveId },
+            select: { transcript: true },
+          });
+          if (!seen?.transcript) transcript = await transcribeVideo(ad.mediaUrl);
+        }
+
         await prisma.minedAd.upsert({
           where: { adArchiveId: ad.adArchiveId },
           create: {
+            transcript,
             adArchiveId: ad.adArchiveId,
             sourceId,
             pageId: ad.pageId || "?",
@@ -150,6 +164,7 @@ export async function runSource(sourceId: string): Promise<RunResult> {
             deliveryStop: stop,
             countries: ad.countries.join(","),
             creativeId,
+            ...(transcript ? { transcript } : {}),
           },
         });
       }
@@ -202,11 +217,18 @@ export async function runSource(sourceId: string): Promise<RunResult> {
       const language = detectLang(rep.body || rep.linkTitle);
       const anyActive = ads.some((a) => a.active);
 
-      // enriquecimento: landing page
+      // acha/atualiza a Offer (antes do enriquecimento pesado, pra saber se é nova)
+      const existing = await prisma.offer.findUnique({
+        where: { pageId_title: { pageId: rep.pageId, title } },
+        include: { snapshots: { orderBy: { at: "asc" } } },
+      });
+
+      // enriquecimento: landing page + rastreamento (Fase 2)
       let gateway: string | null = null;
       let funnelType: string | null = null;
       let priceSeen: string | null = null;
       let landingUrl: string | null = rep.linkUrl || null;
+      let track = { ga: null as string | null, gtm: null as string | null, pixel: null as string | null, tiktok: null as string | null };
       if (landingUrl && /^https?:\/\//i.test(landingUrl)) {
         const page = await fetchLanding(landingUrl);
         if (page) {
@@ -215,18 +237,33 @@ export async function runSource(sourceId: string): Promise<RunResult> {
           funnelType = info.funnelType;
           priceSeen = info.priceSeen;
           landingUrl = page.finalUrl;
+          track = extractTrackingIds(page.html);
+        }
+      }
+
+      // grafo de domínios (Fase 2) + Google Ads Transparency (Fase 3) — só na 1ª vez
+      let sameIpDomains = existing?.sameIpDomains ?? "";
+      let gatAdCount = existing?.gatAdCount ?? null;
+      let gatFirstSeen = existing?.gatFirstSeen ?? null;
+      let gatLastSeen = existing?.gatLastSeen ?? null;
+      const domain = hostOf(landingUrl);
+      if (domain && (!existing || existing.gatAdCount == null)) {
+        try {
+          const [rip, gat] = await Promise.all([reverseIp(domain), gatDomainTimeline(domain)]);
+          if (rip.length) sameIpDomains = rip.join(",").slice(0, 2000);
+          if (gat) {
+            gatAdCount = gat.adCount;
+            gatFirstSeen = gat.firstSeen;
+            gatLastSeen = gat.lastSeen;
+          }
+        } catch (e) {
+          console.warn(`[enrich] ${domain}: ${(e as Error).message}`);
         }
       }
 
       const arbitrage =
         seenCountries.some((c2) => ["US", "GB", "DE", "FR", "CA", "AU", "IT", "ES"].includes(c2)) &&
         !seenCountries.includes("BR");
-
-      // acha/atualiza a Offer
-      const existing = await prisma.offer.findUnique({
-        where: { pageId_title: { pageId: rep.pageId, title } },
-        include: { snapshots: { orderBy: { at: "asc" } } },
-      });
 
       // tendência a partir dos snapshots
       let trend = "new";
@@ -245,6 +282,8 @@ export async function runSource(sourceId: string): Promise<RunResult> {
         .findMany({ where: { pageId: rep.pageId, active: true }, select: { id: true } })
         .then((r) => r.length);
 
+      const ipDomainCount = sameIpDomains ? sameIpDomains.split(",").filter(Boolean).length : 0;
+
       const score = scoreOffer({
         adCount: c.adCount,
         pageCount: c.pageCount,
@@ -255,6 +294,8 @@ export async function runSource(sourceId: string): Promise<RunResult> {
         language,
         arbitrage,
         niche: source.niche,
+        ipDomainCount,
+        gatAdCount,
       });
 
       const data = {
@@ -275,6 +316,14 @@ export async function runSource(sourceId: string): Promise<RunResult> {
         trend,
         arbitrage,
         score,
+        trackingGa: track.ga,
+        trackingGtm: track.gtm,
+        trackingPixel: track.pixel,
+        trackingTiktok: track.tiktok,
+        sameIpDomains,
+        gatAdCount,
+        gatFirstSeen,
+        gatLastSeen,
       };
 
       const offer = existing

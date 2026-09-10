@@ -23,6 +23,10 @@ export interface OfferView {
   status: string;
   verdict: string | null;
   verdictAngle: string | null;
+  trackingPixel?: string | null;
+  trackingGa?: string | null;
+  sameIpCount?: number;
+  gatAdCount?: number | null;
 }
 
 const TREND_LABEL: Record<string, string> = {
@@ -62,6 +66,10 @@ export function OfferCard({ offer }: { offer: OfferView }) {
             <span className={"badge " + offer.trend}>{TREND_LABEL[offer.trend]}</span>
           )}
           {offer.arbitrage && <span className="badge">arbitragem</span>}
+          {(offer.sameIpCount ?? 0) >= 2 && (offer.sameIpCount ?? 0) <= 40 && (
+            <span className="badge">{offer.sameIpCount} domínios / mesmo IP</span>
+          )}
+          {(offer.gatAdCount ?? 0) > 0 && <span className="badge">GAT {offer.gatAdCount}</span>}
           {offer.nicheLabel && <span className="badge">{offer.nicheLabel}</span>}
         </div>
 
@@ -79,6 +87,8 @@ export function OfferCard({ offer }: { offer: OfferView }) {
           {offer.markets && <span>{offer.markets}</span>}
           {offer.funnelType && offer.funnelType !== "unknown" && <span>LP: {offer.funnelType}</span>}
           <span>gateway: {offer.gateway || "não detectado"}</span>
+          {offer.trackingPixel && <span>pixel {offer.trackingPixel}</span>}
+          {offer.trackingGa && <span>{offer.trackingGa}</span>}
           {offer.language && offer.language !== "unknown" && <span>{offer.language}</span>}
           <span>por {offer.advertiser}</span>
         </div>

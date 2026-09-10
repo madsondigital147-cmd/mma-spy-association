@@ -20,6 +20,8 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   if (onlyArbitrage) where.arbitrage = true;
   if (onlyScaling) where.trend = "scaling";
   if (minAds) where.adCount = { gte: minAds };
+  const onlyMultiDomain = sp.multidom === "1";
+  if (onlyMultiDomain) where.sameIpDomains = { not: "" };
 
   const offers = await prisma.offer.findMany({
     where,
@@ -49,6 +51,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
         niche={niche}
         onlyArbitrage={onlyArbitrage}
         onlyScaling={onlyScaling}
+        onlyMultiDomain={onlyMultiDomain}
         minAds={minAds}
         counts={countMap}
       />
@@ -83,6 +86,10 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
               status: o.status,
               verdict: o.verdict,
               verdictAngle: o.verdictAngle,
+              trackingPixel: o.trackingPixel,
+              trackingGa: o.trackingGa,
+              sameIpCount: o.sameIpDomains ? o.sameIpDomains.split(",").filter(Boolean).length : 0,
+              gatAdCount: o.gatAdCount,
             }}
           />
         ))

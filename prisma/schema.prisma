@@ -58,6 +58,7 @@ model MinedAd {
   mediaType     String? // image | video
   mediaHash     String?
   euReach       Int?
+  transcript    String? // fala do vídeo (opcional, se TRANSCRIBE_ENABLED)
   firstSeen     DateTime       @default(now())
   lastSeen      DateTime       @default(now())
   creativeId    String?
@@ -109,6 +110,15 @@ model Offer {
   status       String          @default("new") // new | approved | testing | ignored
   verdict      String?
   verdictAngle String?
+  // --- Fase 2/3: grafo de domínios + Google Ads Transparency ---
+  trackingGa     String? // G-XXXX / UA-XXXX
+  trackingGtm    String? // GTM-XXXX
+  trackingPixel  String? // Facebook Pixel id
+  trackingTiktok String? // TikTok pixel id
+  sameIpDomains  String  @default("") // csv — domínios no mesmo IP (reverse IP)
+  gatAdCount     Int? // nº de anúncios do domínio no Google Ads Transparency
+  gatFirstSeen   DateTime?
+  gatLastSeen    DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   creatives    MinedCreative[]
