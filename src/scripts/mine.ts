@@ -3,13 +3,16 @@ import { prisma } from "../lib/db";
 import { runAllActiveSources, runSource } from "../lib/pipeline";
 
 // Uso:
-//   npm run mine            -> roda todas as fontes ativas
-//   npm run mine <sourceId> -> roda uma fonte
+//   npm run mine                       -> roda todas as fontes ativas
+//   npm run mine <sourceId>            -> roda uma fonte
+//   npm run mine <sourceId> --reconsolidate -> só reprocessa o que já está no banco (sem raspar)
 async function main() {
-  const id = process.argv[2];
+  const args = process.argv.slice(2);
+  const reconsolidate = args.includes("--reconsolidate");
+  const id = args.find((a) => !a.startsWith("--"));
   const started = Date.now();
   if (id) {
-    const r = await runSource(id);
+    const r = await runSource(id, { reconsolidate });
     console.log("\nresultado:", r);
   } else {
     const rs = await runAllActiveSources();

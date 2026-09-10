@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { detectFunnel, fetchLanding } from "./gateway";
-import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, textHash, urlHash } from "./hash";
+import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash } from "./hash";
 import { parseKeywords } from "./keywords";
 import { detectLang } from "./lang";
 import { scoreOffer } from "./score";
@@ -92,7 +92,7 @@ export interface RunResult {
   offersUpserted: number;
 }
 
-export async function runSource(sourceId: string): Promise<RunResult> {
+export async function runSource(sourceId: string, opts: { reconsolidate?: boolean } = {}): Promise<RunResult> {
   const source = await prisma.source.findUnique({ where: { id: sourceId } });
   if (!source) throw new Error(`Source ${sourceId} não existe`);
 
@@ -103,6 +103,12 @@ export async function runSource(sourceId: string): Promise<RunResult> {
   let raw = 0;
   const touchedCreatives = new Set<string>();
 
+  // modo reconsolidação: pula a raspagem e reprocessa o que já está no banco
+  if (opts.reconsolidate) {
+    const all = await prisma.minedCreative.findMany({ select: { id: true } });
+    for (const c of all) touchedCreatives.add(c.id);
+  }
+
   // agrupa mercados por idioma pra traduzir a palavra-chave na hora da busca
   const marketsByLang = new Map<string, string[]>();
   for (const m of markets) {
@@ -112,7 +118,7 @@ export async function runSource(sourceId: string): Promise<RunResult> {
 
   try {
     // ---- 1. ingestão + fingerprint + dedup por criativo ----
-    for (const term of keywords) {
+    for (const term of opts.reconsolidate ? [] : keywords) {
       for (const [lang, langMarkets] of marketsByLang) {
         const q = await translateKeyword(term, lang as Lang);
         let ads: RawAd[] = [];
@@ -146,16 +152,16 @@ export async function runSource(sourceId: string): Promise<RunResult> {
         await prisma.minedAd.upsert({
           where: { adArchiveId: ad.adArchiveId },
           create: {
-            transcript,
+            transcript: stripControl(transcript) || null,
             adArchiveId: ad.adArchiveId,
             sourceId,
-            pageId: ad.pageId || "?",
-            pageName: ad.pageName || "?",
-            body: ad.body,
-            linkTitle: ad.linkTitle,
-            linkCaption: ad.linkCaption,
-            linkUrl: ad.linkUrl,
-            ctaText: ad.ctaText,
+            pageId: stripControl(ad.pageId) || "?",
+            pageName: stripControl(ad.pageName) || "?",
+            body: stripControl(ad.body) || null,
+            linkTitle: stripControl(ad.linkTitle) || null,
+            linkCaption: stripControl(ad.linkCaption) || null,
+            linkUrl: stripControl(ad.linkUrl) || null,
+            ctaText: stripControl(ad.ctaText) || null,
             countries: ad.countries.join(","),
             platforms: ad.platforms.join(","),
             deliveryStart: start,
@@ -183,18 +189,22 @@ export async function runSource(sourceId: string): Promise<RunResult> {
 
     // ---- 2. recalcula contadores dos criativos tocados ----
     for (const cid of touchedCreatives) {
-      const ads = await prisma.minedAd.findMany({ where: { creativeId: cid } });
-      const pages = new Set(ads.map((a) => a.pageId));
-      const sample = ads.find((a) => a.body)?.body ?? null;
-      await prisma.minedCreative.update({
-        where: { id: cid },
-        data: {
-          adCount: ads.length,
-          pageCount: pages.size,
-          lastSeen: new Date(),
-          sampleBody: sample ? normalizeText(sample) : undefined,
-        },
-      });
+      try {
+        const ads = await prisma.minedAd.findMany({ where: { creativeId: cid } });
+        const pages = new Set(ads.map((a) => a.pageId));
+        const sample = ads.find((a) => a.body)?.body ?? null;
+        await prisma.minedCreative.update({
+          where: { id: cid },
+          data: {
+            adCount: ads.length,
+            pageCount: pages.size,
+            lastSeen: new Date(),
+            sampleBody: sample ? normalizeText(sample) : undefined,
+          },
+        });
+      } catch (e) {
+        console.warn(`[recalc criativo ${cid}] ${(e as Error).message}`);
+      }
     }
 
     // ---- 3. candidatas -> consolida em Offer ----
@@ -212,6 +222,7 @@ export async function runSource(sourceId: string): Promise<RunResult> {
     let offersUpserted = 0;
 
     for (const c of candidates) {
+     try {
       const ads = c.ads;
       const starts = ads.map((a) => a.deliveryStart).filter(Boolean) as Date[];
       const earliest = starts.length ? new Date(Math.min(...starts.map((d) => d.getTime()))) : null;
@@ -358,6 +369,9 @@ export async function runSource(sourceId: string): Promise<RunResult> {
       });
 
       offersUpserted++;
+     } catch (e) {
+      console.warn(`[consolida criativo ${c.id}] ${(e as Error).message}`);
+     }
     }
 
     await prisma.run.update({

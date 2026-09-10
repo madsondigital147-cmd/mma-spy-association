@@ -11,8 +11,33 @@ import path from "node:path";
 
 const MEDIA_DIR = process.env.MEDIA_DIR || "./media";
 
+// Tira byte nulo, controles C0/C1 e surrogates soltos — o Postgres rejeita isso.
+export function stripControl(text: string | null | undefined): string {
+  if (!text) return "";
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 9 || c === 10 || c === 13) {
+      out += " ";
+      continue;
+    }
+    if (c < 0x20 || (c >= 0x7f && c <= 0x9f)) continue;
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const n = text.charCodeAt(i + 1);
+      if (n >= 0xdc00 && n <= 0xdfff) {
+        out += text[i] + text[i + 1];
+        i++;
+      }
+      continue;
+    }
+    if (c >= 0xdc00 && c <= 0xdfff) continue;
+    out += text[i];
+  }
+  return out;
+}
+
 export function normalizeText(text: string | null | undefined): string {
-  return (text || "")
+  return stripControl(text)
     .toLowerCase()
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/[^\p{L}\s]/gu, " ")
