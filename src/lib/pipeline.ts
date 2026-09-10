@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { detectFunnel, fetchLanding } from "./gateway";
-import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash } from "./hash";
+import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash, videoFrameHash } from "./hash";
 import { parseKeywords } from "./keywords";
 import { detectLang } from "./lang";
 import { scoreOffer } from "./score";
@@ -78,6 +78,8 @@ async function fingerprint(ad: RawAd): Promise<{ hash: string; type: string | nu
     return { hash: urlHash(ad.mediaUrl), type: "image", sample: ad.mediaUrl };
   }
   if (ad.mediaUrl && ad.mediaType === "video") {
+    const fh = await videoFrameHash(ad.mediaUrl); // pHash de um frame -> mesmo vídeo re-upado agrupa
+    if (fh) return { hash: fh, type: "video", sample: ad.mediaUrl };
     return { hash: urlHash(ad.mediaUrl), type: "video", sample: ad.mediaUrl };
   }
   // path da API oficial: sem arquivo de mídia -> agrupa pela copy
@@ -217,14 +219,17 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       try {
         const ads = await prisma.minedAd.findMany({ where: { creativeId: cid } });
         const pages = new Set(ads.map((a) => a.pageId));
-        const sample = ads.find((a) => a.body)?.body ?? null;
+        const sample = ads.find((a) => a.body)?.body ?? ads.find((a) => a.linkTitle)?.linkTitle ?? null;
+        const hook = sample ? stripControl(sample).split(/[\n.!?]/)[0].trim().slice(0, 120) : null;
         await prisma.minedCreative.update({
           where: { id: cid },
           data: {
             adCount: ads.length,
             pageCount: pages.size,
+            advertiserCount: pages.size,
             lastSeen: new Date(),
             sampleBody: sample ? normalizeText(sample) : undefined,
+            hookText: hook || undefined,
           },
         });
       } catch (e) {
@@ -343,6 +348,16 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         .findMany({ where: { pageId: rep.pageId, active: true }, select: { id: true } })
         .then((r) => r.length);
 
+      // maior criativo desta oferta (pageId+title pode ter vários criativos)
+      const offerCreatives = existing
+        ? await prisma.minedCreative.findMany({
+            where: { OR: [{ offerId: existing.id }, { id: c.id }] },
+            select: { adCount: true },
+          })
+        : [{ adCount: c.adCount }];
+      const topCreativeAds = Math.max(c.adCount, ...offerCreatives.map((x) => x.adCount));
+      const creativeCount = Math.max(1, offerCreatives.length);
+
       const ipDomainCount = sameIpDomains ? sameIpDomains.split(",").filter(Boolean).length : 0;
 
       const score = scoreOffer({
@@ -372,6 +387,8 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         language,
         adCount: c.adCount,
         pageCount: c.pageCount,
+        topCreativeAds,
+        creativeCount,
         pageAdCount,
         daysActive,
         trend,
@@ -411,6 +428,23 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
      } catch (e) {
       console.warn(`[consolida criativo ${c.id}] ${(e as Error).message}`);
      }
+    }
+
+    // ---- 4. snapshot por anunciante (watchlist / "tava com 300, pulou pra 900") ----
+    try {
+      const pageIds = [...new Set(candidates.flatMap((c) => c.ads.map((a) => a.pageId)).filter((p) => p && p !== "?"))];
+      for (const pid of pageIds) {
+        const ads = await prisma.minedAd.findMany({
+          where: { pageId: pid },
+          select: { active: true, pageName: true },
+        });
+        const active = ads.filter((a) => a.active).length;
+        await prisma.pageSnapshot.create({
+          data: { pageId: pid, pageName: ads[0]?.pageName ?? "?", activeAdCount: active },
+        });
+      }
+    } catch (e) {
+      console.warn(`[page snapshots] ${(e as Error).message}`);
     }
 
     await prisma.run.update({

@@ -70,20 +70,23 @@ model MinedAd {
 
 /// Agrupamento de anúncios que usam a MESMA mídia/copy. Aqui sai o "N anúncios no criativo".
 model MinedCreative {
-  id          String    @id @default(cuid())
-  mediaHash   String    @unique
-  mediaType   String?
-  sampleMedia String?
-  sampleBody  String?
-  adCount     Int       @default(0)
-  pageCount   Int       @default(0)
-  firstSeen   DateTime  @default(now())
-  lastSeen    DateTime  @default(now())
-  ads         MinedAd[]
-  offerId     String?
-  offer       Offer?    @relation(fields: [offerId], references: [id])
+  id             String    @id @default(cuid())
+  mediaHash      String    @unique
+  mediaType      String?
+  sampleMedia    String?
+  sampleBody     String?
+  hookText       String? // 1ª linha da copy — texto do card
+  adCount        Int       @default(0)
+  pageCount      Int       @default(0)
+  advertiserCount Int      @default(0) // páginas/anunciantes distintos usando este criativo
+  firstSeen      DateTime  @default(now())
+  lastSeen       DateTime  @default(now())
+  ads            MinedAd[]
+  offerId        String?
+  offer          Offer?    @relation(fields: [offerId], references: [id])
 
   @@index([offerId])
+  @@index([adCount])
 }
 
 /// A oferta consolidada — o que aparece na fila de review.
@@ -100,10 +103,12 @@ model Offer {
   gateway      String?
   funnelType   String? // vsl | advertorial | direct | quiz | unknown
   language     String?
-  adCount      Int             @default(0)
-  pageCount    Int             @default(0)
-  pageAdCount  Int             @default(0)
-  daysActive   Int             @default(0)
+  adCount        Int           @default(0)
+  pageCount      Int           @default(0)
+  pageAdCount    Int           @default(0)
+  topCreativeAds Int           @default(0) // maior nº de anúncios num único criativo desta oferta
+  creativeCount  Int           @default(0) // criativos distintos desta oferta
+  daysActive     Int           @default(0)
   trend        String          @default("new") // new | scaling | steady | fading | dead
   arbitrage    Boolean         @default(false)
   score        Int             @default(0)
@@ -153,4 +158,24 @@ model OfferTest {
   note        String?
   roas        Float?
   profitCents Int?
+}
+
+/// Anunciante/página monitorado — a watchlist ("tava com 300, pulou pra 900").
+model PageWatch {
+  id        String   @id @default(cuid())
+  pageId    String   @unique
+  pageName  String
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+/// Foto diária do total de anúncios ativos de uma página (nível anunciante).
+model PageSnapshot {
+  id           String   @id @default(cuid())
+  pageId       String
+  pageName     String
+  at           DateTime @default(now())
+  activeAdCount Int
+
+  @@index([pageId, at])
 }
