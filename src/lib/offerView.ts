@@ -27,7 +27,9 @@ type Row = {
   updatedAt: Date;
   gatAdCount: number | null;
   sameIpDomains: string;
-  creatives?: { hookText: string | null }[];
+  discoveredVia: string;
+  imageUrl: string | null;
+  creatives?: { hookText: string | null; imageUrl?: string | null }[];
 };
 
 export function toOfferView(o: Row): OfferView {
@@ -57,5 +59,7 @@ export function toOfferView(o: Row): OfferView {
     active: o.trend !== "dead",
     gatAdCount: o.gatAdCount,
     sameIpCount: o.sameIpDomains ? o.sameIpDomains.split(",").filter(Boolean).length : 0,
+    discoveredVia: o.discoveredVia,
+    imageUrl: o.imageUrl ?? o.creatives?.[0]?.imageUrl ?? null,
   };
 }

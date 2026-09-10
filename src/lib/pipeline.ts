@@ -232,6 +232,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         const pages = new Set(ads.map((a) => a.pageId));
         const sample = ads.find((a) => a.body)?.body ?? ads.find((a) => a.linkTitle)?.linkTitle ?? null;
         const hook = sample ? stripControl(sample).split(/[\n.!?]/)[0].trim().slice(0, 120) : null;
+        const img = ads.find((a) => a.mediaType === "image" && a.mediaUrl)?.mediaUrl ?? null;
         await prisma.minedCreative.update({
           where: { id: cid },
           data: {
@@ -241,6 +242,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
             lastSeen: new Date(),
             sampleBody: sample ? normalizeText(sample) : undefined,
             hookText: hook || undefined,
+            imageUrl: img || undefined,
           },
         });
       } catch (e) {
@@ -446,6 +448,13 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         recommended,
         recommendReason,
         adSnapshotUrl: rep.snapshotUrl ?? existing?.adSnapshotUrl ?? null,
+        discoveredVia: source.kind === "meta" ? "meta-scraper" : source.kind,
+        landingDomain: domain,
+        imageUrl:
+          c.imageUrl ??
+          ads.find((a) => a.mediaType === "image" && a.mediaUrl)?.mediaUrl ??
+          existing?.imageUrl ??
+          null,
       };
 
       const offer = existing

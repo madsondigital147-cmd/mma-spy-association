@@ -20,18 +20,33 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
   });
   if (!offer) notFound();
 
+  const sameOffer = offer.landingDomain
+    ? await prisma.offer.findMany({
+        where: { landingDomain: offer.landingDomain, id: { not: offer.id } },
+        select: { id: true, title: true, discoveredVia: true, niche: true, markets: true, topCreativeAds: true },
+        take: 8,
+      })
+    : [];
+
   const nicheLabel = offer.niche ? NICHE_BY_ID.get(offer.niche)?.label ?? offer.niche : "—";
   const L = offerLinks(offer);
   const points = offer.snapshots.map((s) => ({ at: s.at.toISOString(), v: s.adCount }));
   const tech = offer.techStack ? offer.techStack.split(",").filter(Boolean) : [];
   const priceSeen = offer.snapshots.filter((s) => s.priceSeen).pop()?.priceSeen ?? null;
 
+  const VIA: Record<string, string> = {
+    "meta-scraper": "🔵 Meta Ads",
+    "meta-api": "🔵 Meta (API)",
+    tiktok: "⬛ TikTok Ads",
+    youtube: "🔴 YouTube",
+    reviews: "📣 Site de reclamações",
+  };
   const stat = [
+    ["Fonte", VIA[offer.discoveredVia] ?? offer.discoveredVia],
     ["Estrutura", (offer.funnelType || "—").toUpperCase()],
     ["Idioma", `${langFlag(offer.language)} ${langName(offer.language)}`],
     ["Nicho", nicheLabel],
     ["Gateway", offer.gateway || "não detectado"],
-    ["Tráfego", "🔵 Facebook"],
     ["Status", offer.trend === "dead" ? "Inativo" : "Ativo"],
   ];
 
@@ -198,6 +213,21 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
         )}
       </div>
 
+      {sameOffer.length > 0 && (
+        <div className="panel">
+          <div className="section-label" style={{ margin: "0 0 10px" }}>
+            Mesma oferta (mesmo domínio) em outras fontes / nichos
+          </div>
+          <div className="actions">
+            {sameOffer.map((s) => (
+              <a key={s.id} className="btn ghost" href={`/oferta/${s.id}`}>
+                {VIA[s.discoveredVia] ?? s.discoveredVia} · {s.markets} · {s.topCreativeAds} anúncios
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="section-label">Criativos ({offer.creatives.length})</div>
       <div className="grid">
         {offer.creatives.map((c) => (
@@ -215,7 +245,16 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
             <div className="ocard-title" style={{ minHeight: 34 }}>
               {c.hookText || c.sampleBody?.slice(0, 80) || "—"}
             </div>
-            <div className="ocard-thumb">{c.mediaType === "video" ? "▶" : "▤"}</div>
+            <div className="ocard-thumb">
+              {c.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} referrerPolicy="no-referrer" />
+              ) : c.mediaType === "video" ? (
+                "▶"
+              ) : (
+                "▤"
+              )}
+            </div>
           </div>
         ))}
       </div>

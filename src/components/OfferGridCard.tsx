@@ -29,9 +29,18 @@ export interface OfferView {
   active: boolean;
   gatAdCount: number | null;
   sameIpCount: number;
+  discoveredVia: string;
+  imageUrl: string | null;
 }
 
 const TREND: Record<string, string> = { scaling: "escalando", fading: "murchando", dead: "morreu" };
+const VIA: Record<string, string> = {
+  "meta-scraper": "Meta",
+  "meta-api": "Meta (API)",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  reviews: "Reclamações",
+};
 
 function ago(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -110,7 +119,19 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
       </div>
 
       <div className="ocard-thumb">
-        {offer.funnelType === "vsl" ? "▶" : "▤"}
+        {offer.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={offer.imageUrl}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            referrerPolicy="no-referrer"
+          />
+        ) : offer.funnelType === "vsl" ? (
+          "▶"
+        ) : (
+          "▤"
+        )}
         {offer.hook && <div className="ocard-hook">{offer.hook}</div>}
       </div>
 
@@ -125,7 +146,9 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
       )}
 
       <div className="ocard-foot">
-        <span>{offer.daysActive}d no ar</span>
+        <span>{VIA[offer.discoveredVia] ?? offer.discoveredVia}</span>
+        <span>·</span>
+        <span>{offer.daysActive}d</span>
         <span>·</span>
         <span>{offer.creativeCount} criativos</span>
         {offer.gateway && <span>· {offer.gateway}</span>}

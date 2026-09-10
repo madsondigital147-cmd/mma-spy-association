@@ -16,6 +16,7 @@
     "hash-password": "tsx src/scripts/hash-password.ts",
     "dorks": "tsx src/scripts/dorks.ts",
     "reviews": "tsx src/scripts/reviews.ts",
+    "garimpo": "tsx src/scripts/garimpo.ts",
     "db:migrate:mark": "prisma migrate resolve --applied 0001_init",
     "postinstall": "prisma generate"
   },

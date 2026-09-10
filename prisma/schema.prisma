@@ -15,6 +15,7 @@ model Source {
   niche     String
   markets   String // csv de códigos de país: US,GB,DE,BR
   keywords  String // palavras-chave, uma por linha (texto cru colado)
+  kind      String    @default("meta") // meta | tiktok | youtube | reviews
   status    String    @default("active") // active | paused
   createdAt DateTime  @default(now())
   lastRunAt DateTime?
@@ -76,6 +77,7 @@ model MinedCreative {
   sampleMedia    String?
   sampleBody     String?
   hookText       String? // 1ª linha da copy — texto do card
+  imageUrl       String? // thumbnail (mídia do FB p/ imagem, frame extraído p/ vídeo)
   adCount        Int       @default(0)
   pageCount      Int       @default(0)
   advertiserCount Int      @default(0) // páginas/anunciantes distintos usando este criativo
@@ -132,6 +134,10 @@ model Offer {
   recommended    Boolean @default(false)
   recommendReason String?
   adSnapshotUrl  String? // link do anúncio na Biblioteca
+  discoveredVia  String  @default("meta-scraper") // meta-scraper | meta-api | tiktok | youtube | reviews
+  landingDomain  String? // domínio da landing — pra cruzar a mesma oferta entre plataformas
+  imageUrl       String? // thumbnail do criativo (mídia do FB / frame do vídeo)
+  favoritedAt    DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   creatives    MinedCreative[]
