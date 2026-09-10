@@ -35,6 +35,26 @@ function cleanTitle(linkTitle?: string | null, pageName?: string | null): string
   return (pageName || "Sem título").trim().slice(0, 120);
 }
 
+// vocabulário de relevância derivado das palavras-chave da fonte — filtra oferta
+// fora do nicho que entrou pelas iscas de link (news.com, twr, api. …)
+const STOP_TOK = new Set([
+  "twr", "news", "com", "api", "www", "http", "https", "youtube", "google", "globo", "cbcnews", "nes",
+  "the", "and", "your", "for", "with", "que", "para", "com",
+]);
+function relevanceTokens(keywords: string): Set<string> {
+  const toks = new Set<string>();
+  for (const w of keywords.toLowerCase().replace(/[^\p{L}\s]/gu, " ").split(/\s+/)) {
+    if (w.length >= 4 && !STOP_TOK.has(w)) toks.add(w);
+  }
+  return toks;
+}
+function isRelevant(tokens: Set<string>, ...texts: (string | null | undefined)[]): boolean {
+  if (tokens.size < 3) return true; // fonte de iscas (sem vocabulário) — não filtra
+  const hay = texts.filter(Boolean).join(" ").toLowerCase();
+  for (const t of tokens) if (hay.includes(t)) return true;
+  return false;
+}
+
 function daysBetween(from?: Date | null, to = new Date()): number {
   if (!from) return 0;
   return Math.max(0, Math.floor((to.getTime() - from.getTime()) / DAY));
@@ -99,6 +119,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
 
   const markets = source.markets.split(",").map((s) => s.trim()).filter(Boolean);
   const keywords = parseKeywords(source.keywords);
+  const relTokens = relevanceTokens(source.keywords);
   const run = await prisma.run.create({ data: { sourceId, status: "running" } });
 
   let raw = 0;
@@ -239,6 +260,8 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       const rep = ads.find((a) => a.linkTitle) ?? ads.find((a) => a.body) ?? ads[0];
       if (isJunk(rep.body)) continue;
       if (ignoredPageIds.has(rep.pageId)) continue;
+      // fora do nicho (entrou por isca de link)?
+      if (!isRelevant(relTokens, ...ads.map((a) => a.body), ...ads.map((a) => a.linkTitle), rep.pageName)) continue;
 
       const title = cleanTitle(rep.linkTitle, rep.pageName);
       const advertiser = (rep.pageName || "?").slice(0, 120);

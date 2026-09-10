@@ -321,6 +321,16 @@ export const NICHES: Niche[] = [
       es: ["recuperar a tu ex", "hacer que te extrañe"],
     },
   },
+  {
+    // rede ampla: iscas de link de exibição (news.com, twr, api. …) — pega tudo
+    // que usa aquele padrão, sem filtro de nicho. Garimpo à parte.
+    id: "rede-ampla",
+    label: "Rede ampla (iscas de link)",
+    group: "outros",
+    risk: "gray",
+    bias: -4,
+    seeds: {},
+  },
   // ---- bônus ----
   {
     id: "espiritualidade",
