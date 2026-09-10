@@ -104,9 +104,12 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
   let raw = 0;
   const touchedCreatives = new Set<string>();
 
-  // modo reconsolidação: pula a raspagem e reprocessa o que já está no banco
+  // modo reconsolidação: pula a raspagem, reprocessa só os criativos com 2+ anúncios
   if (opts.reconsolidate) {
-    const all = await prisma.minedCreative.findMany({ select: { id: true } });
+    const all = await prisma.minedCreative.findMany({
+      where: { adCount: { gte: MIN_ADS } },
+      select: { id: true },
+    });
     for (const c of all) touchedCreatives.add(c.id);
   }
 
@@ -250,12 +253,18 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       });
 
       // enriquecimento: landing page + rastreamento (Fase 2)
-      let gateway: string | null = null;
-      let funnelType: string | null = null;
+      // no reconsolidate a gente pula (rápido) — as rodadas agendadas enriquecem depois
+      let gateway: string | null = existing?.gateway ?? null;
+      let funnelType: string | null = existing?.funnelType ?? null;
       let priceSeen: string | null = null;
-      let landingUrl: string | null = rep.linkUrl || null;
-      let track = { ga: null as string | null, gtm: null as string | null, pixel: null as string | null, tiktok: null as string | null };
-      if (landingUrl && /^https?:\/\//i.test(landingUrl)) {
+      let landingUrl: string | null = existing?.landingUrl ?? rep.linkUrl ?? null;
+      let track = {
+        ga: existing?.trackingGa ?? null,
+        gtm: existing?.trackingGtm ?? null,
+        pixel: existing?.trackingPixel ?? null,
+        tiktok: existing?.trackingTiktok ?? null,
+      };
+      if (!opts.reconsolidate && landingUrl && /^https?:\/\//i.test(landingUrl)) {
         const page = await fetchLanding(landingUrl);
         if (page) {
           const info = detectFunnel(page.html, page.finalUrl);
@@ -275,7 +284,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       let gatLastSeen = existing?.gatLastSeen ?? null;
       const domain = hostOf(landingUrl);
       const needHeavy = domain && (!existing || existing.gatAdCount == null);
-      if (needHeavy && heavyEnriched < ENRICH_LIMIT) {
+      if (!opts.reconsolidate && needHeavy && heavyEnriched < ENRICH_LIMIT) {
         heavyEnriched++;
         try {
           const [rip, gat] = await Promise.all([reverseIp(domain!), gatDomainTimeline(domain!)]);
