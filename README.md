@@ -1,116 +1,105 @@
 # MMA SPY ASSOCIATION
 
 Mineração de ofertas na Meta Ad Library — mercados **EN / EU / BR**.
-Banco no **Neon** (Postgres, free), mineração roda **local** (custo ~R$ 0).
-Sócio em outra cidade acessa o mesmo banco / o mesmo dashboard.
+Banco no **Neon** (Postgres, free), mineração roda **local**, dashboard na **Vercel**.
+Referência de UX: American Swipe.
 
-O braço é código (scraper + API oficial). Você (ou a camada de IA opcional)
-só entra no fim, sobre o shortlist já reduzido.
+O braço é código (scraper + APIs). Você (ou a camada de IA opcional) só entra no
+fim, sobre o shortlist já reduzido.
 
 ---
 
-## Como funciona
+## Fluxo
 
 ```
-palavras-chave  ──►  fontes (scraper p/ BR+mundo · API oficial p/ UE)
-                     ──►  baixa mídia, gera hash, agrupa por criativo
-                     ──►  filtra: 2+ anúncios no criativo · 7+ dias no ar · não-lixo
-                     ──►  segue a landing: gateway, tipo de funil, preço
-                     ──►  score 0–100  ──►  fila de review no dashboard
-                     ──►  snapshot diário  ──►  tendência (escalando/murchando)
+palavras-chave → traduz por mercado → scraper (BR+mundo) + API oficial (UE)
+  → baixa mídia · dHash imagem · frame+dHash vídeo (ffmpeg) → agrupa por criativo
+  → filtra: 2+ anúncios · 7+ dias · não-lixo · relevante ao nicho
+  → segue a landing: gateway, funil, GA/GTM/Pixel · reverse-IP · Google Ads Transparency
+  → score → fila de review
+  → snapshot diário (oferta + página) → tendência "escalando/murchando"
 ```
+
+## Telas
+
+| Rota | O que é |
+|---|---|
+| `/` | Fila de review — grid de cards, ordena por nº de anúncios no criativo, filtros |
+| `/ofertas` | Todas as ofertas mineradas (qualquer status) |
+| `/criativos` | Criativos por nº de anúncios — "o mesmo criativo duplicado N vezes" |
+| `/oferta/[id]` | Detalhe: stat cards, gráfico de análises, links (landing + página na Biblioteca), criativos |
+| `/paginas` | Anunciantes por anúncios ativos + ⭐ watchlist + delta entre rodadas |
+| `/fontes` | Cadastro de palavras-chave por nicho + mercados |
 
 ## Setup (uma vez)
 
-1. **Pegue as strings do Neon** em `console.neon.tech` → projeto **mma-spy-association** → **Connect**:
-   - `DATABASE_URL` = *Pooled connection* (tem `-pooler` no host)
-   - `DATABASE_URL_UNPOOLED` = *Direct connection* (sem `-pooler`)
-
-2. ```bash
-   cd D:\mma-spy-association
-   copy .env.example .env      # cole as duas strings do Neon no .env
-   npm install
-   npx playwright install chromium
-   npm run db:migrate:mark     # marca a migration 0001 como aplicada (o schema já está no Neon)
-   npm run dev                 # dashboard em http://localhost:3000
-   ```
-
-   > O schema já foi criado no Neon. `db:migrate:mark` só registra isso no histórico
-   > do Prisma. Se algum dia quiser recriar do zero: `npx prisma migrate deploy`.
-
-Node não fica no PATH do shell não-interativo do Windows:
-`set PATH=C:\Program Files\nodejs;%PATH%`
-
-## Uso
-
-1. **/fontes** → nicho + mercados → **cole as palavras-chave** → “Iniciar mineração”.
-2. Ou: `npm run mine` (todas as fontes) / `npm run mine <sourceId>`.
-3. **/** (Fila de review) → Aprovar / Vou testar / Ignorar.
-
-## Rodar sozinho (mineração)
-
-- **Agendador de Tarefas do Windows** → aponte para `run-mine.bat` (ex. 08:00 e 20:00).
-- **ou** deixe `npm run worker` rodando (cron interno; `--now` roda na hora).
-
-A mineração escreve direto no Neon, então tanto faz de qual PC roda.
-
-## Acesso do sócio (outra cidade)
-
-**Agora (grátis, PC seu ligado):** instale o **Tailscale** nos dois PCs. O sócio
-abre `http://SEU-IP-TAILSCALE:3000`. Túnel privado, ninguém de fora enxerga.
-
-**Depois (24/7, ~R$ 0–20/mês):** deploy do dashboard na **Vercel** apontando pro
-mesmo `DATABASE_URL` do Neon. Aí **ligue o login**:
-
 ```bash
-npm run hash-password -- "uma senha longa de verdade"
-# cole AUTH_USERS e AUTH_SECRET nas Environment Variables da Vercel
-# (pode ter dois: AUTH_USERS="matheus:HASH1,socio:HASH2")
+cd D:\mma-spy-association
+copy .env.example .env      # cole as strings do Neon (Connect no console.neon.tech)
+npm install
+npx playwright install chromium
+npm run db:migrate:mark
+npm run dev                 # http://localhost:3000
 ```
 
-Sem `AUTH_USERS`/`AUTH_SECRET` o app roda **aberto** (bom pra local). Com eles,
-todo acesso passa pela tela de login. A mineração continua rodando no seu PC —
-a Vercel só serve o dashboard (lá o scraper não roda bem).
+Node fora do PATH no Windows: `set PATH=C:\Program Files\nodejs;%PATH%`
+
+## Comandos
+
+| Comando | Faz |
+|---|---|
+| `npm run mine` | roda todas as fontes ativas |
+| `npm run mine <sourceId>` | roda uma fonte |
+| `npx tsx src/scripts/mine.ts <id> --reconsolidate` | reprocessa o banco **sem raspar** (recovery/backfill) |
+| `npm run verdict` | camada de IA (se `VERDICT_ENABLED=true`) + resumo Telegram |
+| `npm run worker` | cron interno 08h/20h (alternativa ao Agendador) |
+| `npm run dorks <nicho> [mercado]` | gera queries Google/Yandex pra garimpar landings |
+| `npm run hash-password -- "senha"` | gera `AUTH_USERS` / `AUTH_SECRET` |
+
+## Rodar sozinho
+
+**Windows:** 2 tarefas no Agendador apontando pra `run-mine.bat` (08:00 e 20:00).
+Já criadas nesta máquina: `MMASPY Mine AM` / `MMASPY Mine PM`.
 
 ## Fontes de dados
 
 | Mercado | Fonte | Precisa de |
 |---|---|---|
-| UE (DE, FR, IT, ES, PT, NL…) | **API oficial** da Ad Library — todos os anúncios comerciais, com faixa de alcance | `META_ADLIB_TOKEN` |
-| EUA, UK, CA, AU, BR, resto | **Scraper** (Playwright) da Ad Library pública | `npx playwright install chromium` |
+| UE | **API oficial** da Ad Library | `META_ADLIB_TOKEN` |
+| EUA/UK/BR/resto | **Scraper** (Playwright) | `npx playwright install chromium` |
+| Enriquecimento | landing (gateway/tracking) · reverse-IP (hackertarget) · Google Ads Transparency | — |
+| Vídeo | frame via ffmpeg (bundle do Playwright) | — |
 
-Sem `META_ADLIB_TOKEN`, os mercados da UE caem no scraper também.
-Se a Meta bloquear o scraper, configure `MMASPY_PROXY` (proxy residencial).
+Sem `META_ADLIB_TOKEN`, a UE cai no scraper. `MMASPY_PROXY` se a Meta bloquear.
 
-## Camada de veredito (IA) — opcional
+## Filtros / limites (`.env`)
 
-Desligada por padrão (`VERDICT_ENABLED=false`, custo zero). Ligando, lê só o
-shortlist (score ≥ `VERDICT_MIN_SCORE`) e escreve 2 linhas + ângulo por oferta.
-Aceita qualquer endpoint compatível com a API da OpenAI (`VERDICT_BASE_URL`).
+- `MIN_ADS_PER_CREATIVE` / `MIN_DAYS_ACTIVE` — piso pra virar candidata
+- `ENRICH_LIMIT` — quantas candidatas (top do ranking) ganham reverse-IP + GAT por rodada
+- `TRANSCRIBE_ENABLED` + `TRANSCRIBE_*` — transcrição de vídeo (opcional, custo)
+- `VERDICT_*` — camada de veredito por IA (opcional)
+- `TELEGRAM_*` — alerta do top 5 (opcional)
 
-## Alertas — opcional
+## Deploy (Vercel)
 
-Preencha `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` para receber o top 5 do dia.
+`vercel deploy --prod --scope <scope>` — precisa de token da conta.
+Env vars na Vercel: `DATABASE_URL` (Neon pooled), `AUTH_SECRET`, `AUTH_USERS`.
+A mineração **não** roda na Vercel (scraper não cabe em serverless) — só o dashboard.
 
-## Limitações conhecidas (v1)
+## Limitações conhecidas
 
-- **Hash de vídeo** é pela URL normalizada, não pelo conteúdo. Imagem usa dHash
-  perceptual (agrupa de verdade).
-- **Path da API oficial** não entrega arquivo de mídia — agrupa criativo pela copy.
-- **Scraper** depende da estrutura do JSON interno da Meta; parser é defensivo
-  (walk recursivo por `ad_archive_id`), mas pode precisar de ajuste se a Meta mudar.
-- **"Escalando"** é inferido de nº de anúncios ao longo do tempo (snapshots), não
-  de spend real — a Ad Library não expõe gasto de anúncio comercial fora da UE.
-- Precisa de ≥ 2 rodadas em dias diferentes pra tendência sair de "novo".
-- Mídia baixada (`/media`) fica no disco local; num deploy Vercel ela é efêmera.
+- **"Escalando"** precisa de 2+ snapshots em dias diferentes.
+- Frame de vídeo depende do ffmpeg do Playwright estar presente; senão cai no hash da URL.
+- `reverseIp` (hackertarget) é ~50/dia grátis — por isso o `ENRICH_LIMIT`.
+- Mídia baixada (`/media`) é local; num deploy Vercel seria efêmera.
 
 ## Roadmap
 
-- Fase 2 — detector de "escalando" com alerta + watch de página direto
-- Fase 3 — `OfferTest` puxando ROAS/lucro real (fecha o loop) + extensão de captura
-- Fase 4 — score treinado nos seus próprios vereditos (win/loss)
-- Fase 5 — executor de regras (kill/scale automático)
+- `OfferTest` puxando ROAS/lucro real → fecha o loop
+- score treinado nos vereditos win/loss
+- executor de regras (kill/scale automático)
+- extensão de captura manual
 
 ## Stack
 
-Next.js 15 · Prisma 6 + **Neon Postgres** · Playwright · sharp · node-cron
+Next.js 15 · Prisma 6 + Neon Postgres · Playwright · sharp · ffmpeg · node-cron
