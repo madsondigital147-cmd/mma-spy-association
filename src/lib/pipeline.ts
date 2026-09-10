@@ -432,14 +432,14 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       // cloaker = alguém protegendo oferta escalada -> sinal positivo
       if (cloakerSuspect) score = Math.min(100, score + 6);
 
-      // auto-recomenda pra modelar: escalada + funil identificável + fora do BR
+      // auto-recomenda pra modelar: forte + funil identificável + rodando faz tempo + fora do BR
       const funnelKnown =
         !!gateway || !!player || !!techStack || funnelType === "vsl" || funnelType === "advertorial";
       const recommended =
-        score >= 58 &&
-        (trend === "scaling" || topCreativeAds >= 6) &&
+        score >= 62 &&
         funnelKnown &&
-        daysActive >= 14 &&
+        daysActive >= 21 &&
+        (trend === "scaling" || topCreativeAds >= 4 || daysActive >= 45) &&
         !seenCountries.includes("BR");
       const recommendReason = recommended
         ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway || player || techStack.split(",")[0] || "funil montado"}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
