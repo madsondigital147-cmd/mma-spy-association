@@ -90,11 +90,10 @@ select {
   color: var(--faint);
 }
 
-.sb-brand .mark {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
+.brand-mark {
+  border-radius: 5px;
+  vertical-align: -4px;
+  margin-right: 2px;
 }
 
 .sb-section {

@@ -39,7 +39,8 @@ function LoginForm() {
   return (
     <div className="login-wrap">
       <div className="login-brand">
-        <span className="mark">◤◢</span> MMA SPY
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/icon.png" alt="" width={32} height={32} className="brand-mark" /> MMA SPY
       </div>
       <div className="login-tagline">FIND. ANALYZE. SCALE.</div>
       <p className="login-phrase">OPORTUNIDADES NÃO ESPERAM.</p>

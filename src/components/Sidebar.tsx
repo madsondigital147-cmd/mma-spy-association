@@ -20,7 +20,8 @@ export function Sidebar({ showLogout }: { showLogout: boolean }) {
     <aside className="sidebar">
       <div className="sb-brand">
         <div>
-          <span className="mark">◤◢</span> MMA SPY
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/icon.png" alt="" width={20} height={20} className="brand-mark" /> MMA SPY
         </div>
         <div className="sb-tagline">FIND. ANALYZE. SCALE.</div>
       </div>
