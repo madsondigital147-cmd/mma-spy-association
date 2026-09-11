@@ -130,6 +130,7 @@ model Offer {
   gatLastSeen    DateTime?
   // --- tech stack + curadoria ---
   techStack      String  @default("") // csv: VTurb,Cartpanda,Stripe,Atomicat…
+  productType    String? // infoproduto | fisico | desconhecido (heurística gateway+texto)
   player         String? // player de vídeo detectado
   cloakerSuspect Boolean @default(false)
   favorite       Boolean @default(false)

@@ -42,8 +42,10 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
     youtube: "🔴 YouTube",
     reviews: "📣 Site de reclamações",
   };
+  const PRODUCT_TYPE_LABEL: Record<string, string> = { infoproduto: "📚 Infoproduto", fisico: "📦 Físico" };
   const stat = [
     ["Fonte", VIA[offer.discoveredVia] ?? offer.discoveredVia],
+    ["Tipo de produto", PRODUCT_TYPE_LABEL[offer.productType || ""] || "não identificado"],
     ["Estrutura", (offer.funnelType || "—").toUpperCase()],
     ["Idioma", `${langFlag(offer.language)} ${langName(offer.language)}`],
     ["Nicho", nicheLabel],

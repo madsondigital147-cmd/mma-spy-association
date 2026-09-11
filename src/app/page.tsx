@@ -35,6 +35,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   // mesmo criativo). "0" = todas, incluindo 2-9 anúncios ainda sem confirmação.
   const tier = S(sp.tier) || "10";
   const minAds = Number(tier) || 0;
+  const productType = S(sp.ptype);
 
   const where: Record<string, unknown> = {};
   if (!onlyFav && !onlyRec) where.status = status;
@@ -45,6 +46,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   if (onlyFav) where.favorite = true;
   if (onlyRec) where.recommended = true;
   if (onlyCloak) where.cloakerSuspect = true;
+  if (productType) where.productType = productType;
   if (onlyDup && minAds === 0) where.OR = [{ trend: "scaling" }, { topCreativeAds: { gte: 10 } }];
   if (sort === "scaling") where.trend = "scaling";
   if (minAds > 0) where.topCreativeAds = { gte: minAds };
@@ -133,6 +135,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
         sort={sort}
         market={market}
         tier={tier}
+        productType={productType}
         onlyDup={onlyDup}
         onlyArb={onlyArb}
         onlyMulti={onlyMulti}

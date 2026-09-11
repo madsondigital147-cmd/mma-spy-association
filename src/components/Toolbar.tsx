@@ -31,6 +31,7 @@ export function Toolbar({
   sort,
   market,
   tier,
+  productType,
   onlyDup,
   onlyArb,
   onlyMulti,
@@ -46,6 +47,7 @@ export function Toolbar({
   sort: string;
   market: string;
   tier: string;
+  productType: string;
   onlyDup: boolean;
   onlyArb: boolean;
   onlyMulti: boolean;
@@ -112,6 +114,13 @@ export function Toolbar({
       </select>
       <span className={"chip" + (onlyDup ? " on" : "")} onClick={() => apply({ dup: onlyDup ? null : "1" })}>
         escalando / duplicando
+      </span>
+      <span
+        className={"chip" + (productType === "infoproduto" ? " on" : "")}
+        onClick={() => apply({ ptype: productType === "infoproduto" ? null : "infoproduto" })}
+        title="gateway/landing indicando entrega digital (curso, ebook, método)"
+      >
+        📚 infoproduto
       </span>
       <span className={"chip" + (onlyCloak ? " on" : "")} onClick={() => apply({ cloak: onlyCloak ? null : "1" })}>
         possível cloaker

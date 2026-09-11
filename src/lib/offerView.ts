@@ -30,6 +30,7 @@ type Row = {
   discoveredVia: string;
   imageUrl: string | null;
   imageHash?: string | null;
+  productType?: string | null;
   creatives?: { hookText: string | null; imageUrl?: string | null; imageHash?: string | null }[];
 };
 
@@ -67,6 +68,7 @@ export function toOfferView(o: Row): OfferView {
     gatAdCount: o.gatAdCount,
     sameIpCount: o.sameIpDomains ? o.sameIpDomains.split(",").filter(Boolean).length : 0,
     discoveredVia: o.discoveredVia,
+    productType: o.productType ?? null,
     imageUrl:
       posterSrc(o.imageHash, o.imageUrl) ??
       posterSrc(o.creatives?.[0]?.imageHash, o.creatives?.[0]?.imageUrl) ??

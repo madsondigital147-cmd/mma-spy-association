@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { detectTech, fetchLanding } from "./gateway";
+import { detectProductType, type ProductType } from "./productType";
 import { fetchBuffer, hamming, imageDHash, normalizeText, saveMedia, stripControl, textHash, urlHash, videoFrameHash } from "./hash";
 import { cachePoster } from "./media";
 import { parseKeywords } from "./keywords";
@@ -338,6 +339,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       let priceSeen: string | null = null;
       let player: string | null = existing?.player ?? null;
       let techStack: string = existing?.techStack ?? "";
+      let productType: ProductType = (existing?.productType as ProductType) ?? "desconhecido";
       let cloakerSuspect = existing?.cloakerSuspect ?? false;
       let landingUrl: string | null = existing?.landingUrl ?? rep.linkUrl ?? null;
       let track = {
@@ -355,7 +357,8 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       if (slugCloaker) cloakerSuspect = true;
 
       // landing fetch é HTTP barato — roda também no reconsolidate (backfill de tech stack)
-      const needLanding = !existing || !existing.techStack || existing.gateway == null;
+      const needLanding =
+        !existing || !existing.techStack || existing.gateway == null || !existing.productType || existing.productType === "desconhecido";
       if (landingUrl && /^https?:\/\//i.test(landingUrl) && (!opts.reconsolidate || needLanding)) {
         const page = await fetchLanding(landingUrl);
         if (page) {
@@ -368,6 +371,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
           if (info.cloakerSuspect) cloakerSuspect = true;
           landingUrl = page.finalUrl;
           track = extractTrackingIds(page.html);
+          productType = detectProductType(page.html, gateway);
         }
       }
 
@@ -488,6 +492,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         gatLastSeen,
         player,
         techStack,
+        productType,
         cloakerSuspect,
         recommended,
         recommendReason,

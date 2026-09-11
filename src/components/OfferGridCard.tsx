@@ -32,7 +32,13 @@ export interface OfferView {
   sameIpCount: number;
   discoveredVia: string;
   imageUrl: string | null;
+  productType: string | null;
 }
+
+const PRODUCT_TYPE: Record<string, string> = {
+  infoproduto: "📚 Infoproduto",
+  fisico: "📦 Físico",
+};
 
 const TREND: Record<string, string> = { scaling: "escalando", fading: "murchando", dead: "morreu" };
 const VIA: Record<string, string> = {
@@ -104,6 +110,9 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
       <div className="ocard-meta">
         <span>⏱ {ago(offer.updatedAt)}</span>
         <span className={"badge-status" + (offer.active ? "" : " off")}>{offer.active ? "Ativo" : "Inativo"}</span>
+        {offer.productType && PRODUCT_TYPE[offer.productType] && (
+          <span className="badge">{PRODUCT_TYPE[offer.productType]}</span>
+        )}
         {offer.trend in TREND && <span className={"badge " + offer.trend}>{TREND[offer.trend]}</span>}
         {offer.recommended && (
           <span className="badge" style={{ background: "rgba(124,92,255,.18)", color: "#b8a6ff", borderColor: "transparent" }}>
