@@ -245,7 +245,9 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         const ads = await prisma.minedAd.findMany({ where: { creativeId: cid } });
         const pages = new Set(ads.map((a) => a.pageId));
         const sample = ads.find((a) => a.body)?.body ?? ads.find((a) => a.linkTitle)?.linkTitle ?? null;
-        const hook = sample ? stripControl(sample).split(/[\n.!?]/)[0].trim().slice(0, 120) : null;
+        // stripControl 2x: a 1ª limpa o texto bruto, a 2ª tira o surrogate solto
+        // que o .slice(120) pode deixar cortando um emoji ao meio (crash no Postgres)
+        const hook = sample ? stripControl(stripControl(sample).split(/[\n.!?]/)[0].trim().slice(0, 120)) : null;
         // "print da frente do criativo": poster do vídeo OU a própria imagem
         const posterUrl =
           ads.find((a) => a.posterUrl)?.posterUrl ??

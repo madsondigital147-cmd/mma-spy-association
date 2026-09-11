@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { dupTier } from "@/lib/score";
+import { dupTier, scoreBand } from "@/lib/score";
 
 export interface OfferView {
   id: string;
@@ -67,7 +67,8 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
     setBusy(false);
   }
 
-  const sc = offer.score >= 70 ? "score" : offer.score >= 45 ? "score mid" : "score low";
+  const band = scoreBand(offer.score);
+  const sc = "score " + band.key;
   const hot = offer.recommended || offer.score >= 75 || offer.topCreativeAds >= 20;
   const tech = offer.techStack ? offer.techStack.split(",").filter(Boolean).slice(0, 4) : [];
 
@@ -156,7 +157,9 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
         <span>·</span>
         <span>{offer.creativeCount} criativos</span>
         {offer.gateway && <span>· {offer.gateway}</span>}
-        <span className={sc}>{offer.score}</span>
+        <span className={sc} title="MMA SCORE">
+          {offer.score} · {band.label}
+        </span>
       </div>
 
       {offer.status === "new" && (

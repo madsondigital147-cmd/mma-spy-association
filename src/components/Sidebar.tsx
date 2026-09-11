@@ -19,7 +19,10 @@ export function Sidebar({ showLogout }: { showLogout: boolean }) {
   return (
     <aside className="sidebar">
       <div className="sb-brand">
-        <span className="mark">◤◢</span> MMA SPY
+        <div>
+          <span className="mark">◤◢</span> MMA SPY
+        </div>
+        <div className="sb-tagline">FIND. ANALYZE. SCALE.</div>
       </div>
       <div className="sb-section">Geral</div>
       {NAV.map((n) => (

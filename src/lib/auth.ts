@@ -11,6 +11,26 @@ export function authDisabled(): boolean {
   return !process.env.AUTH_USERS || !process.env.AUTH_SECRET;
 }
 
+// primeiro nome pra saudação — só cosmético, mapeado dos 2 e-mails cadastrados.
+// sem mapa (usuário novo/email desconhecido): usa a parte antes do @.
+const DISPLAY_NAMES: Record<string, string> = {
+  "madsondigital147@gmail.com": "Madson",
+  "ayricke23@gmail.com": "Ayricke",
+};
+
+export function displayName(user: string | null): string {
+  if (!user) return "";
+  return DISPLAY_NAMES[user.toLowerCase()] || user.split("@")[0];
+}
+
+/** Lê o cookie de sessão (server component/route) e devolve o e-mail logado, se houver. */
+export async function getCurrentUser(): Promise<string | null> {
+  if (authDisabled()) return null;
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  return verifyToken(jar.get(SESSION_COOKIE)?.value);
+}
+
 export async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const buf = await crypto.subtle.digest("SHA-256", data);

@@ -1,5 +1,15 @@
 import { NICHE_BY_ID } from "./niches";
 
+// MMA SCORE — faixa visual (0-100). Puramente de apresentação: deriva do
+// `score` que já é calculado a partir de sinais reais (scoreOffer abaixo).
+export function scoreBand(score: number): { key: string; label: string } {
+  if (score >= 90) return { key: "breakout", label: "BREAKOUT" };
+  if (score >= 75) return { key: "escalando", label: "ESCALANDO" };
+  if (score >= 60) return { key: "potencial", label: "POTENCIAL" };
+  if (score >= 40) return { key: "observar", label: "OBSERVAR" };
+  return { key: "fraco", label: "FRACO" };
+}
+
 export interface ScoreInput {
   adCount: number;
   pageCount: number;

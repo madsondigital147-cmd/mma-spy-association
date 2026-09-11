@@ -1,22 +1,24 @@
 :root {
-  --bg: #0c0e12;
-  --bg-2: #101319;
-  --panel: #161a21;
-  --panel-2: #1c212a;
-  --panel-3: #232935;
-  --border: #242a34;
-  --border-strong: #333b48;
-  --text: #e9ebef;
-  --muted: #8b929d;
-  --faint: #5a606c;
-  --accent: #0066ff;
-  --accent-2: #00b8ff;
-  --violet: #7c5cff;
-  --success: #29c467;
-  --warning: #efa027;
-  --danger: #e24b4a;
+  /* MMA SPY — design tokens oficiais (identidade "intelligence platform premium") */
+  --bg: #080c12; /* background/primary */
+  --bg-2: #0e141d; /* background/secondary */
+  --panel: #121a24; /* surface/card */
+  --panel-2: #17212c;
+  --panel-3: #1c2733;
+  --border: #202a37;
+  --border-strong: #303e4e;
+  --text: #f4f7fa; /* text/primary */
+  --muted: #8b98aa; /* text/secondary */
+  --faint: #5c6773;
+  --accent: #009dff; /* primary blue */
+  --accent-2: #007aff; /* interaction blue */
+  --violet: #8b5cf6; /* special/detection — cloaker, multi-domínio */
+  --success: #00c48a; /* growth/winner */
+  --warning: #f59e0b; /* potencial/atenção */
+  --danger: #ef4444; /* risco/queda */
   --radius: 10px;
-  --sidebar-w: 224px;
+  --sidebar-w: 232px;
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -29,8 +31,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -67,13 +70,24 @@ select {
 }
 
 .sb-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding: 4px 8px 18px;
   font-weight: 700;
   letter-spacing: 0.04em;
   font-size: 13px;
+}
+
+.sb-brand > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sb-tagline {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--faint);
 }
 
 .sb-brand .mark {
@@ -126,6 +140,72 @@ select {
   border-radius: 999px;
   background: var(--panel-3);
   color: var(--muted);
+}
+
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  transition: border-color 0.12s;
+}
+
+.topbar-search:focus-within {
+  border-color: var(--accent-2);
+}
+
+.topbar-search .ico {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.topbar-search input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.topbar-search input::placeholder {
+  color: var(--faint);
+}
+
+.topbar-search kbd {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  color: var(--faint);
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    padding: 10px 16px;
+  }
 }
 
 .main {
@@ -437,15 +517,33 @@ select.chip {
   font-size: 12.5px;
   padding: 2px 9px;
   border-radius: 999px;
-  background: rgba(41, 196, 103, 0.14);
+  background: rgba(0, 196, 138, 0.14);
   color: var(--success);
 }
 
-.ocard-foot .score.mid {
-  background: rgba(239, 160, 39, 0.14);
+/* MMA SCORE — faixas: 90+ breakout · 75+ escalando · 60+ potencial · 40+ observar · <40 fraco */
+.ocard-foot .score.breakout {
+  background: rgba(139, 92, 246, 0.18);
+  color: var(--violet);
+}
+
+.ocard-foot .score.escalando {
+  background: rgba(0, 196, 138, 0.14);
+  color: var(--success);
+}
+
+.ocard-foot .score.potencial {
+  background: rgba(245, 158, 11, 0.16);
   color: var(--warning);
 }
 
+.ocard-foot .score.observar,
+.ocard-foot .score.mid {
+  background: var(--panel-3);
+  color: var(--muted);
+}
+
+.ocard-foot .score.fraco,
 .ocard-foot .score.low {
   background: var(--panel-3);
   color: var(--faint);
@@ -508,6 +606,46 @@ select.chip {
 .statcard .v {
   font-size: 14px;
   font-weight: 600;
+}
+
+.login-wrap {
+  max-width: 340px;
+  margin: 16vh auto 0;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.login-tagline {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+}
+
+.login-phrase {
+  margin: 18px 0 22px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
 }
 
 .panel {

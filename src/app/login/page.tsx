@@ -37,14 +37,13 @@ function LoginForm() {
   }
 
   return (
-    <div style={{ maxWidth: 320, margin: "12vh auto 0", padding: "0 20px" }}>
-      <div className="brand" style={{ fontSize: 18 }}>
-        MMA SPY ASSOCIATION
+    <div className="login-wrap">
+      <div className="login-brand">
+        <span className="mark">◤◢</span> MMA SPY
       </div>
-      <p className="sub" style={{ marginTop: 6 }}>
-        acesso restrito
-      </p>
-      <form onSubmit={submit} className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="login-tagline">FIND. ANALYZE. SCALE.</div>
+      <p className="login-phrase">OPORTUNIDADES NÃO ESPERAM.</p>
+      <form onSubmit={submit} className="card login-card">
         <input type="text" placeholder="usuário" value={user} onChange={(e) => setUser(e.target.value)} autoFocus />
         <input type="password" placeholder="senha" value={pass} onChange={(e) => setPass(e.target.value)} />
         <button className="btn primary" disabled={busy} type="submit">

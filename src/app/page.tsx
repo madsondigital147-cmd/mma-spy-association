@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/db";
 import { NICHE_BY_ID } from "@/lib/niches";
 import { toOfferView } from "@/lib/offerView";
+import { displayName, getCurrentUser } from "@/lib/auth";
 import { OfferGridCard } from "@/components/OfferGridCard";
 import { Toolbar } from "@/components/Toolbar";
 import { MiningBanner } from "@/components/MiningBanner";
+import { Greeting } from "@/components/Greeting";
 
 export const dynamic = "force-dynamic";
 type SP = { [k: string]: string | string[] | undefined };
@@ -69,15 +71,55 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   ]);
   const counts = Object.fromEntries(statusCounts.map((c) => [c.status, c._count]));
   const nicheLabel = (id: string) => NICHE_BY_ID.get(id)?.label ?? id;
+  const user = await getCurrentUser();
 
   return (
     <>
-      <h1>Fila de review</h1>
+      <Greeting name={displayName(user)} />
       <p className="sub">
         {lastRun?.finishedAt
           ? `última rodada ${new Date(lastRun.finishedAt).toLocaleString("pt-BR")} · ${lastRun.rawCount} anúncios brutos`
           : "nenhuma rodada ainda"}
       </p>
+
+      <div className="statcards">
+        <div className="statcard">
+          <div className="k">Novas</div>
+          <div className="v" style={{ fontSize: 22 }}>
+            {counts.new || 0}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="k">Recomendadas</div>
+          <div className="v" style={{ fontSize: 22, color: "var(--violet)" }}>
+            {recCount}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="k">Aprovadas</div>
+          <div className="v" style={{ fontSize: 22 }}>
+            {counts.approved || 0}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="k">Em teste</div>
+          <div className="v" style={{ fontSize: 22 }}>
+            {counts.testing || 0}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="k">Favoritos</div>
+          <div className="v" style={{ fontSize: 22 }}>
+            {favCount}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="k">Ignoradas</div>
+          <div className="v" style={{ fontSize: 22, color: "var(--faint)" }}>
+            {counts.ignored || 0}
+          </div>
+        </div>
+      </div>
 
       <MiningBanner
         active={!!runningRun}
