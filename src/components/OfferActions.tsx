@@ -41,6 +41,26 @@ export function OfferActions({ id, status, favorite }: { id: string; status: str
           Vou testar
         </button>
       )}
+      {status === "testing" && (
+        <>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => patch({ testResult: "win" }).then(() => router.refresh())}
+            title="fecha o teste como ganho — vira Winner"
+          >
+            🏆 Deu Winner
+          </button>
+          <button
+            className="btn ghost"
+            disabled={busy}
+            onClick={() => patch({ testResult: "loss" }).then(() => router.refresh())}
+            title="fecha o teste como perda"
+          >
+            Não deu
+          </button>
+        </>
+      )}
       {status !== "ignored" && (
         <button className="btn ghost" disabled={busy} onClick={() => patch({ status: "ignored" }).then(() => router.refresh())}>
           Ignorar

@@ -9,7 +9,8 @@ export default async function CriativosPage({ searchParams }: { searchParams: Pr
   const min = typeof sp.min === "string" ? Number(sp.min) : 2;
 
   const creatives = await prisma.minedCreative.findMany({
-    where: { adCount: { gte: min } },
+    // esconde placeholder de template não resolvido ({{product}}) — não é oferta, é isca genérica
+    where: { adCount: { gte: min }, NOT: [{ hookText: { contains: "{{" } }, { sampleBody: { contains: "{{" } }] },
     orderBy: [{ adCount: "desc" }],
     take: 150,
     include: { offer: { select: { id: true, title: true, niche: true, markets: true } } },

@@ -38,9 +38,11 @@ export function Toolbar({
   onlyFav,
   onlyRec,
   onlyCloak,
+  onlyWin,
   counts,
   favCount,
   recCount,
+  winCount,
 }: {
   status: string;
   niche: string;
@@ -54,9 +56,11 @@ export function Toolbar({
   onlyFav: boolean;
   onlyRec: boolean;
   onlyCloak: boolean;
+  onlyWin: boolean;
   counts: Record<string, number>;
   favCount: number;
   recCount: number;
+  winCount: number;
 }) {
   const router = useRouter();
   function apply(patch: Record<string, string | null>) {
@@ -73,8 +77,8 @@ export function Toolbar({
       {STATUSES.map(([v, l]) => (
         <span
           key={v}
-          className={"chip" + (status === v && !onlyFav && !onlyRec ? " on" : "")}
-          onClick={() => apply({ status: v, fav: null, rec: null })}
+          className={"chip" + (status === v && !onlyFav && !onlyRec && !onlyWin ? " on" : "")}
+          onClick={() => apply({ status: v, fav: null, rec: null, win: null })}
         >
           {l}
           {counts[v] ? ` ${counts[v]}` : ""}
@@ -82,13 +86,20 @@ export function Toolbar({
       ))}
       <span
         className={"chip" + (onlyRec ? " on" : "")}
-        onClick={() => apply({ rec: onlyRec ? null : "1", fav: null })}
+        onClick={() => apply({ rec: onlyRec ? null : "1", fav: null, win: null })}
         style={{ color: onlyRec ? undefined : "#b8a6ff" }}
       >
         ★ recomendadas{recCount ? ` ${recCount}` : ""}
       </span>
-      <span className={"chip" + (onlyFav ? " on" : "")} onClick={() => apply({ fav: onlyFav ? null : "1", rec: null })}>
+      <span className={"chip" + (onlyFav ? " on" : "")} onClick={() => apply({ fav: onlyFav ? null : "1", rec: null, win: null })}>
         ⭐ favoritos{favCount ? ` ${favCount}` : ""}
+      </span>
+      <span
+        className={"chip" + (onlyWin ? " on" : "")}
+        onClick={() => apply({ win: onlyWin ? null : "1", fav: null, rec: null })}
+        style={{ color: onlyWin ? undefined : "var(--success)" }}
+      >
+        🏆 winners{winCount ? ` ${winCount}` : ""}
       </span>
 
       <span style={{ width: 1, background: "var(--border)", alignSelf: "stretch", margin: "0 4px" }} />

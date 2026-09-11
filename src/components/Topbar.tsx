@@ -25,12 +25,23 @@ export function Topbar() {
         <span className="ico">⌕</span>
         <input
           type="text"
-          placeholder="Buscar por palavra-chave, domínio, anunciante, oferta…"
+          placeholder="Buscar oferta, domínio, anunciante…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         <kbd>Enter</kbd>
       </form>
+      <button
+        type="button"
+        className="topbar-account"
+        title="Sair"
+        onClick={async () => {
+          await fetch("/api/auth/logout", { method: "POST" });
+          window.location.href = "/login";
+        }}
+      >
+        ⎋
+      </button>
     </div>
   );
 }

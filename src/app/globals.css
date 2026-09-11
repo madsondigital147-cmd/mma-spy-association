@@ -29,6 +29,7 @@ html,
 body {
   padding: 0;
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -160,7 +161,8 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   max-width: 480px;
   padding: 7px 12px;
   border-radius: 999px;
@@ -181,6 +183,7 @@ select {
 
 .topbar-search input {
   flex: 1;
+  min-width: 0;
   background: none;
   border: none;
   outline: none;
@@ -201,9 +204,39 @@ select {
   color: var(--faint);
 }
 
+.topbar-account {
+  display: none;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.topbar-account:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
 @media (max-width: 860px) {
   .topbar {
-    padding: 10px 16px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .topbar-search {
+    max-width: none;
+  }
+  .topbar-search kbd {
+    display: none;
+  }
+  .topbar-account {
+    display: flex;
   }
 }
 
@@ -214,12 +247,51 @@ select {
   max-width: 1320px;
 }
 
+/* ---------- mobile bottom nav ---------- */
+.mobilenav {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .sidebar {
     display: none;
   }
   .main {
-    padding: 16px;
+    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobilenav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .mn-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 2px;
+    border-radius: 10px;
+    color: var(--faint);
+    text-decoration: none;
+  }
+  .mn-tab.active {
+    color: var(--accent-2);
+  }
+  .mn-ico {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .mn-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -361,6 +433,28 @@ select.chip {
   padding: 6px 10px;
 }
 
+@media (max-width: 860px) {
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -14px 16px;
+    padding: 0 14px;
+  }
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .toolbar > * {
+    flex-shrink: 0;
+  }
+  .chip,
+  select.chip {
+    padding: 8px 13px;
+    font-size: 12.5px;
+  }
+}
+
 /* ---------- offer grid ---------- */
 .grid {
   display: grid;
@@ -421,7 +515,8 @@ select.chip {
 .ocard-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   padding: 0 14px 8px;
   font-size: 11.5px;
   color: var(--muted);
@@ -503,7 +598,8 @@ select.chip {
   margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   padding: 10px 14px;
   border-top: 1px solid var(--border);
   font-size: 11.5px;
@@ -576,7 +672,8 @@ select.chip {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   margin-bottom: 16px;
 }
 

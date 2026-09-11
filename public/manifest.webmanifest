@@ -1,0 +1,14 @@
+{
+  "name": "MMA SPY — Find. Analyze. Scale.",
+  "short_name": "MMA SPY",
+  "description": "Inteligência competitiva de ofertas em performance marketing",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c12",
+  "theme_color": "#080c12",
+  "icons": [
+    { "src": "/brand/icon-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/brand/icon.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "maskable" }
+  ]
+}

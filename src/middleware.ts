@@ -3,7 +3,7 @@ import { SESSION_COOKIE, authDisabled, verifyToken } from "./lib/auth";
 
 // /brand e /icon.png precisam ficar públicos — senão a própria tela de login
 // (deslogado, sem cookie) não consegue carregar o logo nem o favicon.
-const PUBLIC = ["/login", "/api/auth/", "/brand/", "/icon.png", "/apple-icon.png", "/favicon.ico"];
+const PUBLIC = ["/login", "/api/auth/", "/brand/", "/icon.png", "/apple-icon.png", "/favicon.ico", "/manifest.webmanifest"];
 
 export async function middleware(req: NextRequest) {
   if (authDisabled()) return NextResponse.next();
