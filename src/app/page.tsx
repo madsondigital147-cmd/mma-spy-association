@@ -5,6 +5,7 @@ import { displayName, getCurrentUser } from "@/lib/auth";
 import { OfferGridCard } from "@/components/OfferGridCard";
 import { Toolbar } from "@/components/Toolbar";
 import { MiningBanner } from "@/components/MiningBanner";
+import { MiningHealthAlert } from "@/components/MiningHealthAlert";
 import { Greeting } from "@/components/Greeting";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
         : [{ topCreativeAds: "desc" as const }, { pageCount: "desc" as const }];
 
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-  const [offers, lastRun, runningRun, statusCounts, favCount, recCount, winCount] = await Promise.all([
+  const [offers, lastRun, runningRun, statusCounts, favCount, recCount, winCount, recentRuns] = await Promise.all([
     prisma.offer.findMany({ where, orderBy, take: 120, include: CREATIVE_SEL }),
     prisma.run.findFirst({ where: { status: "ok" }, orderBy: { finishedAt: "desc" } }),
     prisma.run.findFirst({
@@ -73,8 +74,15 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
     prisma.offer.count({ where: { favorite: true } }),
     prisma.offer.count({ where: { recommended: true } }),
     prisma.offer.count({ where: { tests: { some: { status: "win" } } } }),
+    prisma.run.findMany({ where: { status: "ok" }, orderBy: { finishedAt: "desc" }, take: 8, select: { rawCount: true, startedAt: true } }),
   ]);
   const counts = Object.fromEntries(statusCounts.map((c) => [c.status, c._count]));
+  let zeroStreak = 0;
+  for (const r of recentRuns) {
+    if (r.rawCount !== 0) break;
+    zeroStreak++;
+  }
+  const zeroSince = zeroStreak ? recentRuns[zeroStreak - 1].startedAt.toISOString() : null;
   const nicheLabel = (id: string) => NICHE_BY_ID.get(id)?.label ?? id;
   const user = await getCurrentUser();
 
@@ -137,6 +145,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
         label={runningRun ? nicheLabel(runningRun.source.niche) + " · " + runningRun.source.markets : ""}
         startedAt={runningRun ? runningRun.startedAt.toISOString() : null}
       />
+      <MiningHealthAlert zeroStreak={zeroStreak} sinceIso={zeroSince} />
 
       <Toolbar
         status={status}

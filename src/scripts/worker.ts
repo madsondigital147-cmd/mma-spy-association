@@ -26,7 +26,22 @@ async function cycle() {
 }
 
 cron.schedule("0 8,20 * * *", cycle);
-console.log("worker no ar — mineração agendada para 08h e 20h. Ctrl+C para parar.");
+
+// garimpo (TikTok/YouTube/Trustpilot) é scraping pesado — 1x por dia basta.
+// Alimenta as fontes de descoberta; a mineração das 08h/20h processa o que ele achar.
+cron.schedule("30 6 * * *", async () => {
+  const t = new Date().toLocaleString("pt-BR");
+  console.log(`\n[${t}] iniciando garimpo diário (TikTok/YouTube/Trustpilot)`);
+  try {
+    const { garimpoAllActiveNiches } = await import("../lib/garimpo");
+    const rs = await garimpoAllActiveNiches();
+    for (const r of rs) console.log(`  ${r.niche}: +${r.tiktok} tiktok · +${r.youtube} youtube · +${r.trustpilot} trustpilot`);
+  } catch (e) {
+    console.error(`[${t}] garimpo falhou:`, (e as Error).message);
+  }
+});
+
+console.log("worker no ar — mineração 08h/20h, garimpo (TikTok/YouTube/Trustpilot) 06h30. Ctrl+C para parar.");
 
 if (process.argv.includes("--now")) cycle();
 

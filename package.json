@@ -17,6 +17,7 @@
     "dorks": "tsx src/scripts/dorks.ts",
     "reviews": "tsx src/scripts/reviews.ts",
     "garimpo": "tsx src/scripts/garimpo.ts",
+    "garimpo:auto": "tsx src/scripts/garimpo-auto.ts",
     "db:migrate:mark": "prisma migrate resolve --applied 0001_init",
     "postinstall": "prisma generate"
   },

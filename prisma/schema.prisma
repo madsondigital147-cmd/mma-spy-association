@@ -142,6 +142,13 @@ model Offer {
   imageUrl       String? // thumbnail do criativo (mídia do FB / frame do vídeo) — CDN, expira
   imageHash      String? // chave do MediaCache — print da frente do criativo, servido por /i/<hash>
   favoritedAt    DateTime?
+  // --- reclamações (garimpo por site de avaliação) ---
+  reviewCount    Int? // nº de avaliações/reclamações da empresa no site de origem
+  reviewRating   Float? // nota média (0-5), quando disponível
+  reviewSnippet  String? // trecho de reclamação real, se achado
+  reviewSource   String? // trustpilot | tuquejasuma | reclameaqui
+  // --- tradução (cache) ---
+  titlePt        String? // título traduzido pra PT — cacheado na 1ª tradução
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   creatives    MinedCreative[]
@@ -196,6 +203,18 @@ model PageSnapshot {
   activeAdCount Int
 
   @@index([pageId, at])
+}
+
+/// Cache do garimpo por domínio: reclamações/reviews achadas num site de avaliação
+/// (Trustpilot etc.) pra empresa que roda aquele domínio. Vive fora da Offer porque
+/// a descoberta (garimpo) e a mineração de anúncios rodam em ciclos separados.
+model DomainReview {
+  domain      String   @id
+  source      String // trustpilot | tuquejasuma | reclameaqui
+  reviewCount Int?
+  rating      Float?
+  snippet     String?
+  updatedAt   DateTime @updatedAt
 }
 
 /// Cache durável do "print da frente do criativo". A CDN do FB expira os links;

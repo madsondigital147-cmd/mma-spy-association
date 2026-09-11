@@ -6,6 +6,8 @@ import { offerLinks } from "@/lib/links";
 import { posterSrc } from "@/lib/offerView";
 import { Sparkline } from "@/components/Sparkline";
 import { OfferActions } from "@/components/OfferActions";
+import { OfferTranslate } from "@/components/OfferTranslate";
+import { OfferThumbFallback } from "@/components/OfferThumbFallback";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
   const points = offer.snapshots.map((s) => ({ at: s.at.toISOString(), v: s.adCount }));
   const tech = offer.techStack ? offer.techStack.split(",").filter(Boolean) : [];
   const priceSeen = offer.snapshots.filter((s) => s.priceSeen).pop()?.priceSeen ?? null;
+  const topHook = offer.creatives[0]?.hookText || offer.creatives[0]?.sampleBody?.slice(0, 160) || null;
 
   const VIA: Record<string, string> = {
     "meta-scraper": "🔵 Meta Ads",
@@ -57,7 +60,7 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
     <>
       <div className="detail-head">
         <div>
-          <h1>{offer.title}</h1>
+          <OfferTranslate offerId={offer.id} title={offer.title} titlePt={offer.titlePt} hook={topHook} />
           <p className="sub">
             por <b>{offer.advertiser}</b> · {marketsFlags(offer.markets)}{" "}
             {offer.markets
@@ -83,6 +86,16 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
           <span style={{ color: "var(--muted)" }}>
             landing pode ser página branca — testa como cliente real (perfil nativo + VPN do país)
           </span>
+        </div>
+      )}
+
+      {offer.reviewCount != null && (
+        <div className="mining" style={{ background: "rgba(226,75,74,.08)", borderColor: "rgba(226,75,74,.25)" }}>
+          <span style={{ color: "var(--danger)", fontWeight: 600 }}>
+            🚩 {offer.reviewCount} reclamaç{offer.reviewCount === 1 ? "ão" : "ões"} no {offer.reviewSource}
+            {offer.reviewRating != null ? ` · nota ${offer.reviewRating.toFixed(1)}` : ""}
+          </span>
+          {offer.reviewSnippet && <span style={{ color: "var(--muted)" }}>&ldquo;{offer.reviewSnippet}&rdquo;</span>}
         </div>
       )}
 
@@ -257,10 +270,11 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   referrerPolicy="no-referrer"
                 />
-              ) : c.mediaType === "video" ? (
-                "▶"
               ) : (
-                "▤"
+                <OfferThumbFallback
+                  group={offer.niche ? NICHE_BY_ID.get(offer.niche)?.group : null}
+                  funnelType={c.mediaType === "video" ? "vsl" : offer.funnelType}
+                />
               )}
             </div>
           </div>

@@ -7,6 +7,8 @@ export function OfferActions({ id, status, favorite }: { id: string; status: str
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [fav, setFav] = useState(favorite);
+  const [roas, setRoas] = useState("");
+  const [profit, setProfit] = useState("");
 
   async function patch(body: object) {
     setBusy(true);
@@ -16,6 +18,15 @@ export function OfferActions({ id, status, favorite }: { id: string; status: str
       body: JSON.stringify(body),
     });
     setBusy(false);
+  }
+
+  function closeTest(testResult: "win" | "loss") {
+    const body: Record<string, unknown> = { testResult };
+    const roasNum = Number(roas.replace(",", "."));
+    const profitNum = Number(profit.replace(",", "."));
+    if (roas && Number.isFinite(roasNum)) body.roas = roasNum;
+    if (profit && Number.isFinite(profitNum)) body.profitCents = Math.round(profitNum * 100);
+    return patch(body).then(() => router.refresh());
   }
 
   return (
@@ -43,20 +54,33 @@ export function OfferActions({ id, status, favorite }: { id: string; status: str
       )}
       {status === "testing" && (
         <>
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="ROAS real"
+            value={roas}
+            onChange={(e) => setRoas(e.target.value)}
+            style={{ width: 82, fontSize: 12 }}
+            title="ROAS real da campanha (opcional) — alimenta o score de volta"
+          />
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="lucro R$"
+            value={profit}
+            onChange={(e) => setProfit(e.target.value)}
+            style={{ width: 82, fontSize: 12 }}
+            title="lucro real em R$ (opcional)"
+          />
           <button
             className="btn primary"
             disabled={busy}
-            onClick={() => patch({ testResult: "win" }).then(() => router.refresh())}
+            onClick={() => closeTest("win")}
             title="fecha o teste como ganho — vira Winner"
           >
             🏆 Deu Winner
           </button>
-          <button
-            className="btn ghost"
-            disabled={busy}
-            onClick={() => patch({ testResult: "loss" }).then(() => router.refresh())}
-            title="fecha o teste como perda"
-          >
+          <button className="btn ghost" disabled={busy} onClick={() => closeTest("loss")} title="fecha o teste como perda">
             Não deu
           </button>
         </>

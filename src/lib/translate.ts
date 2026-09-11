@@ -61,6 +61,40 @@ function skipTranslate(kw: string): boolean {
   return !/[a-zà-ú]/i.test(kw) || /\.[a-z]{2,}$/i.test(kw) || (kw.length <= 4 && !kw.includes(" "));
 }
 
+// Tradução de texto livre (título/copy do anúncio) pra PT, sob demanda — botão
+// "traduzir" na oferta. Mesma API (MyMemory), sem dicionário curado (texto livre
+// não bate em frase fixa); cacheada em memória pelo processo, e o título fica
+// cacheado também no banco (Offer.titlePt) pra não traduzir de novo a cada view.
+const textCache = new Map<string, string>();
+
+export async function translateText(text: string, target: Lang = "pt"): Promise<string> {
+  const clean = text.trim();
+  if (!clean || target === "en") return clean;
+  const key = `${target}:${clean}`;
+  if (textCache.has(key)) return textCache.get(key)!;
+
+  try {
+    // MyMemory limita ~500 chars por chamada no plano grátis
+    const q = clean.slice(0, 480);
+    const email = process.env.TRANSLATE_EMAIL ? `&de=${encodeURIComponent(process.env.TRANSLATE_EMAIL)}` : "";
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=autodetect|${target}${email}`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const json = await res.json();
+    const out = String(json?.responseData?.translatedText || "").trim();
+    if (out && !/MYMEMORY WARNING|INVALID/i.test(out)) {
+      textCache.set(key, out);
+      return out;
+    }
+  } catch {
+    /* devolve o original */
+  }
+  textCache.set(key, clean);
+  return clean;
+}
+
 export async function translateKeyword(kw: string, target: Lang): Promise<string> {
   if (target === "en" || skipTranslate(kw)) return kw;
   const key = `${target}:${norm(kw)}`;

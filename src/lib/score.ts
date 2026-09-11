@@ -22,6 +22,7 @@ export interface ScoreInput {
   niche: string | null;
   ipDomainCount?: number; // domínios no mesmo IP (grafo — Fase 2)
   gatAdCount?: number | null; // anúncios no Google Ads Transparency (Fase 3)
+  realWinRoas?: number | null; // ROAS real do MELHOR teste vencido (loop fechado) — sinal mais forte que existe
 }
 
 // Heurística inicial. Depois de ~50-100 OfferTest com veredito real, isso vira
@@ -94,6 +95,15 @@ export function scoreOffer(i: ScoreInput): number {
 
   const niche = i.niche ? NICHE_BY_ID.get(i.niche) : undefined;
   if (niche) s += niche.bias;
+
+  // ROAS real de um teste que você fechou como Winner — não é heurística, é
+  // resultado de campanha de verdade. Pesa mais que qualquer sinal de mineração.
+  if (i.realWinRoas != null) {
+    if (i.realWinRoas >= 2) s += 25;
+    else if (i.realWinRoas >= 1.3) s += 15;
+    else if (i.realWinRoas >= 1) s += 8;
+    else s -= 10; // testou e não pagou o ROAS mínimo — mesmo sendo "win" no volume
+  }
 
   return Math.max(0, Math.min(100, Math.round(s)));
 }

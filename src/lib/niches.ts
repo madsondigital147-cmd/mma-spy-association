@@ -86,9 +86,30 @@ export const NICHES: Niche[] = [
     risk: "gray",
     bias: 0,
     seeds: {
-      en: ["last longer in bed", "harder erections naturally", "boost male performance"],
-      pt: ["durar mais na cama", "ereção mais forte", "melhorar o desempenho sexual"],
-      es: ["durar más en la cama", "mejorar la ereccion"],
+      // frases curtas (2-3 palavras) — casam mais fácil com a copy literal do
+      // anúncio; frase longa/descritiva ("erectile dysfunction protocol") tende
+      // a dar 0 resultado na Ad Library mesmo quando o nicho tem volume real.
+      en: [
+        "male enhancement",
+        "last longer bed",
+        "harder erections",
+        "boost testosterone",
+        "ed natural remedy",
+        "bedroom performance",
+        "male vitality",
+        "testosterone booster",
+      ],
+      pt: [
+        "durar mais na cama",
+        "ereção mais forte",
+        "desempenho sexual",
+        "disfunção erétil",
+        "aumentar a testosterona",
+        "potência sexual masculina",
+      ],
+      es: ["durar más en la cama", "mejorar la ereccion", "disfuncion erectil", "potencia sexual"],
+      de: ["länger im bett", "erektion verbessern", "testosteron steigern"],
+      fr: ["durer plus longtemps au lit", "érection plus forte"],
     },
   },
   {
@@ -316,9 +337,27 @@ export const NICHES: Niche[] = [
     risk: "white",
     bias: 0,
     seeds: {
-      en: ["get your ex back", "make him miss you", "text your ex back"],
-      pt: ["reconquistar o ex", "fazer ele sentir sua falta", "voltar com o ex", "meu ex não me procura"],
-      es: ["recuperar a tu ex", "hacer que te extrañe"],
+      en: [
+        "get ex back",
+        "make him miss you",
+        "text your ex back",
+        "his secret obsession",
+        "ex back guide",
+        "win back your ex",
+        "no contact rule",
+        "save my marriage",
+      ],
+      pt: [
+        "reconquistar o ex",
+        "fazer ele sentir sua falta",
+        "voltar com o ex",
+        "reconquistar meu ex",
+        "salvar meu casamento",
+        "textos para reconquistar",
+      ],
+      es: ["recuperar a tu ex", "hacer que te extrañe", "volver con tu ex", "salvar mi matrimonio"],
+      de: ["ex zurückgewinnen", "beziehung retten"],
+      fr: ["récupérer son ex", "sauver son couple"],
     },
   },
   {

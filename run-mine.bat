@@ -21,6 +21,17 @@ echo [%STAMP%] minerando... >> "%LOG%"
 call npm run mine >> "%LOG%" 2>&1
 echo [%date%_%time%] veredito... >> "%LOG%"
 call npm run verdict >> "%LOG%" 2>&1
+
+REM garimpo (TikTok/YouTube/Trustpilot) e pesado - roda so 1x por dia, marcado
+REM por um arquivo com a data (independe de qual das 2 execucoes diarias pega)
+set "GDATE="
+if exist logs\garimpo.lastrun set /p GDATE=<logs\garimpo.lastrun
+if not "%GDATE%"=="%date%" (
+  echo [%date%_%time%] garimpo diario... >> "%LOG%"
+  call npm run garimpo:auto >> "%LOG%" 2>&1
+  echo %date%> logs\garimpo.lastrun
+)
+
 echo [%date%_%time%] fim. >> "%LOG%"
 
 del logs\mine.lock

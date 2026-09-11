@@ -340,8 +340,14 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       // acha/atualiza a Offer (antes do enriquecimento pesado, pra saber se é nova)
       const existing = await prisma.offer.findUnique({
         where: { pageId_title: { pageId: rep.pageId, title } },
-        include: { snapshots: { orderBy: { at: "asc" } } },
+        include: {
+          snapshots: { orderBy: { at: "asc" } },
+          tests: { where: { status: "win", roas: { not: null } } },
+        },
       });
+      // ROAS real do teste vencido — o loop fecha aqui: resultado de campanha de
+      // verdade alimentando o score de volta, não só sinal de mineração.
+      const realWinRoas = existing?.tests.length ? Math.max(...existing.tests.map((t) => t.roas ?? 0)) : null;
 
       // enriquecimento: landing page + tech stack + rastreamento
       // no reconsolidate a gente pula (rápido) — as rodadas agendadas enriquecem depois
@@ -454,6 +460,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         niche: source.niche,
         ipDomainCount,
         gatAdCount,
+        realWinRoas,
       });
       // cloaker = alguém protegendo oferta escalada -> sinal positivo
       if (cloakerSuspect) score = Math.min(100, score + 6);
@@ -470,8 +477,11 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
         (topCreativeAds >= 15 || (trend === "scaling" && topCreativeAds >= 8)) &&
         !seenCountries.includes("BR");
       const recommendReason = recommended
-        ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway || player || techStack.split(",")[0] || "funil montado"}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
+        ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway || player || techStack.split(",")[0] || "funil montado"}${trend === "scaling" ? " · escalando" : ""}${realWinRoas ? ` · ROAS real ${realWinRoas.toFixed(1)}` : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`
         : (existing?.recommendReason ?? null);
+
+      // reclamações achadas pelo garimpo (Trustpilot/tuquejasuma), por domínio
+      const domainReview = domain ? await prisma.domainReview.findUnique({ where: { domain } }).catch(() => null) : null;
 
       const data = {
         sourceId,
@@ -517,6 +527,14 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
           existing?.imageUrl ??
           null,
         imageHash: c.imageHash ?? existing?.imageHash ?? null,
+        ...(domainReview
+          ? {
+              reviewCount: domainReview.reviewCount,
+              reviewRating: domainReview.rating,
+              reviewSnippet: domainReview.snippet,
+              reviewSource: domainReview.source,
+            }
+          : {}),
       };
 
       const offer = existing

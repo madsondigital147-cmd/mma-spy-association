@@ -46,6 +46,7 @@ export function toOfferView(o: Row): OfferView {
     title: o.title,
     advertiser: o.advertiser,
     nicheLabel: o.niche ? NICHE_BY_ID.get(o.niche)?.label ?? o.niche : null,
+    nicheGroup: o.niche ? NICHE_BY_ID.get(o.niche)?.group ?? null : null,
     marketsFlags: marketsFlags(o.markets),
     gateway: o.gateway,
     funnelType: o.funnelType,

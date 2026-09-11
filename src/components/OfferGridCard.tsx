@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { dupTier, scoreBand } from "@/lib/score";
+import { OfferThumbFallback } from "@/components/OfferThumbFallback";
 
 export interface OfferView {
   id: string;
   title: string;
   advertiser: string;
   nicheLabel: string | null;
+  nicheGroup: string | null;
   marketsFlags: string;
   gateway: string | null;
   funnelType: string | null;
@@ -141,10 +143,8 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             referrerPolicy="no-referrer"
           />
-        ) : offer.funnelType === "vsl" ? (
-          "▶"
         ) : (
-          "▤"
+          <OfferThumbFallback group={offer.nicheGroup} funnelType={offer.funnelType} />
         )}
         {offer.hook && <div className="ocard-hook">{offer.hook}</div>}
       </div>
