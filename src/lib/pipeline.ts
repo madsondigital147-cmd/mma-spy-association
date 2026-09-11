@@ -22,11 +22,17 @@ const JUNK = [
   /we are hiring|now hiring|vaga de emprego|estamos contratando|join our team/i,
   /grand opening|nova loja|our new location|horário de funcionamento/i,
   /doação|blood drive|volunteer|campanha de vacinação/i,
+  // ruído de alto volume que contamina qualquer nicho por coincidência de vocabulário
+  // (webnovel/short-drama, apps de "quem viu seu perfil"/espião de relacionamento)
+  /dramabox|reelshort|goodnovel|short drama|kurzserie|webtoon/i,
+  /god king|billionaire (wife|husband|patient|daddy)|baby daddy|reborn as|secretly a (billionaire|ceo)/i,
+  /matched set|left out|who('s| is) (stalking|watching|texting)|spy on (your|his|her)|deleted messages/i,
 ];
 
-function isJunk(body?: string | null): boolean {
-  if (!body) return false;
-  return JUNK.some((re) => re.test(body));
+function isJunk(...texts: (string | null | undefined)[]): boolean {
+  const hay = texts.filter(Boolean).join(" ");
+  if (!hay) return false;
+  return JUNK.some((re) => re.test(hay));
 }
 
 // rejeita título que veio como placeholder de template não resolvido
@@ -53,8 +59,11 @@ function relevanceTokens(keywords: string): Set<string> {
 function isRelevant(tokens: Set<string>, ...texts: (string | null | undefined)[]): boolean {
   if (tokens.size < 3) return true; // fonte de iscas (sem vocabulário) — não filtra
   const hay = texts.filter(Boolean).join(" ").toLowerCase();
-  for (const t of tokens) if (hay.includes(t)) return true;
-  return false;
+  let hits = 0;
+  for (const t of tokens) if (hay.includes(t)) hits++;
+  // vocabulário grande (fonte de nicho de verdade) -> exige 2 palavras batendo,
+  // 1 só bate por acaso (ex: "money"/"power" aparecem em anúncio de webnovel/app)
+  return hits >= (tokens.size >= 8 ? 2 : 1);
 }
 
 function daysBetween(from?: Date | null, to = new Date()): number {
@@ -303,7 +312,7 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       if (daysActive < MIN_DAYS) continue;
 
       const rep = ads.find((a) => a.linkTitle) ?? ads.find((a) => a.body) ?? ads[0];
-      if (isJunk(rep.body)) continue;
+      if (isJunk(rep.body, rep.linkTitle, rep.pageName)) continue;
       if (ignoredPageIds.has(rep.pageId)) continue;
       // fora do nicho (entrou por isca de link)?
       if (!isRelevant(relTokens, ...ads.map((a) => a.body), ...ads.map((a) => a.linkTitle), rep.pageName)) continue;
@@ -432,14 +441,16 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       // cloaker = alguém protegendo oferta escalada -> sinal positivo
       if (cloakerSuspect) score = Math.min(100, score + 6);
 
-      // auto-recomenda pra modelar: forte + funil identificável + rodando faz tempo + fora do BR
+      // auto-recomenda pra modelar: precisa de DUPLICAÇÃO DE VERDADE (+15 no mesmo
+      // criativo) — dias no ar sozinho não é "concreto" o suficiente, dias no ar só
+      // confirma. Funil montado + fora do BR continuam obrigatórios.
       const funnelKnown =
         !!gateway || !!player || !!techStack || funnelType === "vsl" || funnelType === "advertorial";
       const recommended =
-        score >= 62 &&
+        score >= 65 &&
         funnelKnown &&
-        daysActive >= 21 &&
-        (trend === "scaling" || topCreativeAds >= 4 || daysActive >= 45) &&
+        daysActive >= 14 &&
+        (topCreativeAds >= 15 || (trend === "scaling" && topCreativeAds >= 8)) &&
         !seenCountries.includes("BR");
       const recommendReason = recommended
         ? `${topCreativeAds} anúncios no criativo · ${daysActive}d no ar · ${gateway || player || techStack.split(",")[0] || "funil montado"}${trend === "scaling" ? " · escalando" : ""} — modelar pra ${seenCountries.includes("US") ? "ES/LATAM ou BR" : "BR"}`

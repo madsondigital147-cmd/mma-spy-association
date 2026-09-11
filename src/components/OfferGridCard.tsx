@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { dupTier } from "@/lib/score";
 
 export interface OfferView {
   id: string;
@@ -75,6 +76,9 @@ export function OfferGridCard({ offer }: { offer: OfferView }) {
       <div className="ocard-head">
         <span className="ocard-ads">
           {offer.topCreativeAds.toLocaleString("pt-BR")} <small>no criativo</small>
+        </span>
+        <span className="badge" style={{ fontWeight: 700 }}>
+          {dupTier(offer.topCreativeAds).label}
         </span>
         <span className="ocard-icons">
           {offer.trend === "scaling" && <span title="escalando">📈</span>}

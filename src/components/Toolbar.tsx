@@ -17,12 +17,20 @@ const SORTS: [string, string][] = [
   ["score", "score"],
 ];
 const MARKETS = ["US", "GB", "FR", "DE", "BR", "ES", "IT"];
+const TIERS: [string, string][] = [
+  ["10", "📈 +10 (padrão — oportunidade confirmada)"],
+  ["20", "📈 +20"],
+  ["50", "🔥 +50"],
+  ["100", "🔥 +100"],
+  ["0", "todas (2+, ainda validando)"],
+];
 
 export function Toolbar({
   status,
   niche,
   sort,
   market,
+  tier,
   onlyDup,
   onlyArb,
   onlyMulti,
@@ -37,6 +45,7 @@ export function Toolbar({
   niche: string;
   sort: string;
   market: string;
+  tier: string;
   onlyDup: boolean;
   onlyArb: boolean;
   onlyMulti: boolean;
@@ -82,6 +91,18 @@ export function Toolbar({
 
       <span style={{ width: 1, background: "var(--border)", alignSelf: "stretch", margin: "0 4px" }} />
 
+      <select
+        className="chip"
+        value={tier}
+        onChange={(e) => apply({ tier: e.target.value === "10" ? null : e.target.value })}
+        style={{ fontWeight: 600 }}
+      >
+        {TIERS.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
       <select className="chip" value={sort} onChange={(e) => apply({ sort: e.target.value })}>
         {SORTS.map(([v, l]) => (
           <option key={v} value={v}>

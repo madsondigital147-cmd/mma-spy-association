@@ -29,6 +29,10 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   const onlyFav = sp.fav === "1";
   const onlyRec = sp.rec === "1";
   const onlyCloak = sp.cloak === "1";
+  // tier de duplicação: por padrão só mostra oportunidade CONFIRMADA (+10 no
+  // mesmo criativo). "0" = todas, incluindo 2-9 anúncios ainda sem confirmação.
+  const tier = S(sp.tier) || "10";
+  const minAds = Number(tier) || 0;
 
   const where: Record<string, unknown> = {};
   if (!onlyFav && !onlyRec) where.status = status;
@@ -39,8 +43,9 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   if (onlyFav) where.favorite = true;
   if (onlyRec) where.recommended = true;
   if (onlyCloak) where.cloakerSuspect = true;
-  if (onlyDup) where.OR = [{ trend: "scaling" }, { topCreativeAds: { gte: 10 } }];
+  if (onlyDup && minAds === 0) where.OR = [{ trend: "scaling" }, { topCreativeAds: { gte: 10 } }];
   if (sort === "scaling") where.trend = "scaling";
+  if (minAds > 0) where.topCreativeAds = { gte: minAds };
 
   const orderBy =
     sort === "days"
@@ -85,6 +90,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
         niche={niche}
         sort={sort}
         market={market}
+        tier={tier}
         onlyDup={onlyDup}
         onlyArb={onlyArb}
         onlyMulti={onlyMulti}
@@ -98,7 +104,11 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
 
       {offers.length === 0 ? (
         <div className="empty">
-          {runningRun ? "minerando — as ofertas aparecem aqui conforme processa" : "nada com esses filtros"}
+          {runningRun
+            ? "minerando — as ofertas aparecem aqui conforme processa"
+            : minAds > 0
+              ? `nenhuma oferta com +${minAds} anúncios no mesmo criativo ainda — tente "todas (2+, ainda validando)" ou espere mais rodadas`
+              : "nada com esses filtros"}
         </div>
       ) : (
         <div className="grid">
