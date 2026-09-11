@@ -46,14 +46,18 @@ function cleanTitle(linkTitle?: string | null, pageName?: string | null): string
 
 // vocabulário de relevância derivado das palavras-chave da fonte — filtra oferta
 // fora do nicho que entrou pelas iscas de link (news.com, twr, api. …)
+// >=6 letras (não 4): "frequency"+"mind" batendo em anúncio de aparelho de cura
+// por frequência (nada a ver com prosperidade) é o tipo de falso-positivo que
+// palavra genérica de 4-5 letras solta de uma frase maior ("god's frequency",
+// "millionaire mind") produz. Fragmento curto de frase composta não é sinal.
 const STOP_TOK = new Set([
   "twr", "news", "com", "api", "www", "http", "https", "youtube", "google", "globo", "cbcnews", "nes",
-  "the", "and", "your", "for", "with", "que", "para", "com",
+  "the", "and", "your", "for", "with", "que", "para", "com", "frequency", "working", "natural",
 ]);
 function relevanceTokens(keywords: string): Set<string> {
   const toks = new Set<string>();
   for (const w of keywords.toLowerCase().replace(/[^\p{L}\s]/gu, " ").split(/\s+/)) {
-    if (w.length >= 4 && !STOP_TOK.has(w)) toks.add(w);
+    if (w.length >= 6 && !STOP_TOK.has(w)) toks.add(w);
   }
   return toks;
 }
@@ -315,12 +319,19 @@ export async function runSource(sourceId: string, opts: { reconsolidate?: boolea
       if (daysActive < MIN_DAYS) continue;
 
       const rep = ads.find((a) => a.linkTitle) ?? ads.find((a) => a.body) ?? ads[0];
-      if (isJunk(rep.body, rep.linkTitle, rep.pageName)) continue;
-      if (ignoredPageIds.has(rep.pageId)) continue;
-      // fora do nicho (entrou por isca de link)?
-      if (!isRelevant(relTokens, ...ads.map((a) => a.body), ...ads.map((a) => a.linkTitle), rep.pageName)) continue;
-
       const title = cleanTitle(rep.linkTitle, rep.pageName);
+      const isJunkNow = isJunk(rep.body, rep.linkTitle, rep.pageName);
+      const isRelevantNow = isRelevant(relTokens, ...ads.map((a) => a.body), ...ads.map((a) => a.linkTitle), rep.pageName);
+      if (isJunkNow || ignoredPageIds.has(rep.pageId) || !isRelevantNow) {
+        // reconsolidate: um filtro ficou mais rígido depois que essa oferta já
+        // existia — ela não passa mais, então some da fila (não deleta, só ignora)
+        if (opts.reconsolidate) {
+          await prisma.offer
+            .updateMany({ where: { pageId: rep.pageId, title, NOT: { status: "ignored" } }, data: { status: "ignored" } })
+            .catch(() => {});
+        }
+        continue;
+      }
       const advertiser = (rep.pageName || "?").slice(0, 120);
       const seenCountries = [...new Set(ads.flatMap((a) => a.countries.split(",").filter(Boolean)))];
       const language = detectLang(rep.body || rep.linkTitle);
