@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, authDisabled, verifyToken } from "./lib/auth";
 
-const PUBLIC = ["/login", "/api/auth/"];
+// /brand e /icon.png precisam ficar públicos — senão a própria tela de login
+// (deslogado, sem cookie) não consegue carregar o logo nem o favicon.
+const PUBLIC = ["/login", "/api/auth/", "/brand/", "/icon.png", "/apple-icon.png", "/favicon.ico"];
 
 export async function middleware(req: NextRequest) {
   if (authDisabled()) return NextResponse.next();
